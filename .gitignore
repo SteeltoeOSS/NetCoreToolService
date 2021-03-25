@@ -1,0 +1,4 @@
+*.sln.DotSettings.User
+
+bin/
+obj/
