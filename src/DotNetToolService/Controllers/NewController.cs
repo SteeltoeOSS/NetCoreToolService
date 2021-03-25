@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Steeltoe.DotNetToolService.Models;
 using Steeltoe.DotNetToolService.Utils;
 
 namespace Steeltoe.DotNetToolService.Controllers
@@ -18,36 +17,43 @@ namespace Steeltoe.DotNetToolService.Controllers
     {
         private readonly ILogger<NewController> _logger;
 
+        private static readonly string Dotnet = "dotnet";
+
         public NewController(ILogger<NewController> logger)
         {
             _logger = logger;
         }
 
         [HttpGet]
-        public async Task<ActionResult> Get([FromQuery] NewSpec newSpec)
+        public async Task<ActionResult> GetTemplates()
         {
-            if (newSpec.Template is null)
-            {
-                return BadRequest("missing template");
-            }
-
-            newSpec.Name ??= "Sample";
-
-            using var workDir = new TempDirectory();
-
-            var args = new List<string>() { "new", newSpec.Template, "--output", newSpec.Name };
-            if (!(newSpec.Options is null))
-            {
-                args.AddRange(newSpec.Options.Split(",").Select(option => $"--{option.Trim()}"));
-            }
-
             var pInfo = new ProcessStartInfo
             {
-                FileName = "dotnet",
-                Arguments = string.Join(' ', args),
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                ArgumentList = { "new", "--list" },
+            };
+
+            return await ProcessToResult(pInfo);
+        }
+
+        [HttpGet]
+        [Route("{template}")]
+        public async Task<ActionResult> GetProject(string template, string options)
+        {
+            var opts = options?.Split(',').Select(opt => opt.Trim()).ToList() ?? new List<string>();
+            var pArgs = new List<string>() { "new", template };
+            var name = opts.Find(opt => opt.StartsWith("output="))?.Split('=', 2)[1];
+            if (name is null)
+            {
+                name = "Sample";
+                pArgs.AddRange(new[] { "--output", name });
+            }
+
+            pArgs.AddRange(opts.Select(opt => $"--{opt}"));
+
+            using var workDir = new TempDirectory();
+            var pInfo = new ProcessStartInfo
+            {
+                Arguments = string.Join(' ', pArgs),
                 WorkingDirectory = workDir.FullName,
             };
 
@@ -58,70 +64,41 @@ namespace Steeltoe.DotNetToolService.Controllers
                 return result;
             }
 
-            _logger.LogInformation("OKAY!!!!!!");
-
-            var zipFile = $"{workDir.FullName}.zip";
-            ZipFile.CreateFromDirectory(workDir.FullName, zipFile);
-
-            var bytes = await System.IO.File.ReadAllBytesAsync(zipFile);
-            System.IO.File.Delete(zipFile);
-            return File(bytes, "application/zip", $"{newSpec.Name}.zip");
-        }
-
-        [HttpGet]
-        [Route("templates")]
-        public async Task<ActionResult> GetTemplates()
-        {
-            using var workDir = new TempDirectory();
-
-            var pInfo = new ProcessStartInfo
+            if (!Directory.EnumerateFileSystemEntries(workDir.FullName).Any())
             {
-                FileName = "dotnet",
-                ArgumentList = { "new", "--list" },
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                WorkingDirectory = workDir.FullName,
-            };
+                return NotFound($"template {template} does not exist");
+            }
 
-            return await ProcessToResult(pInfo);
+            using var zipFile = new TempFile(false);
+            ZipFile.CreateFromDirectory(workDir.FullName, zipFile.FullName);
+
+            var bytes = await System.IO.File.ReadAllBytesAsync(zipFile.FullName);
+            return File(bytes, "application/zip", $"{name}.zip");
         }
 
         [HttpGet]
-        [Route("templates/{id}")]
+        [Route("{id}/help")]
         public async Task<ActionResult> GetTemplate(string id)
         {
-            using var workDir = new TempDirectory();
-
             var pInfo = new ProcessStartInfo
             {
-                FileName = "dotnet",
                 ArgumentList = { "new", id, "--help" },
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                WorkingDirectory = workDir.FullName,
             };
 
             return await ProcessToResult(pInfo);
         }
 
         [HttpPost]
-        [Route("templates")]
-        public async Task<ActionResult> PostTemplate(TemplateSpec templateSpec)
+        public async Task<ActionResult> PostTemplate(string nuGetId)
         {
-            if (templateSpec.NuGetId is null)
+            if (nuGetId is null)
             {
                 return BadRequest("missing NuGet ID");
             }
 
             var pInfo = new ProcessStartInfo
             {
-                FileName = "dotnet",
-                ArgumentList = { "new", "--install", templateSpec.NuGetId },
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                ArgumentList = { "new", "--install", nuGetId },
             };
 
             return await ProcessToResult(pInfo);
@@ -129,6 +106,17 @@ namespace Steeltoe.DotNetToolService.Controllers
 
         private async Task<ActionResult> ProcessToResult(ProcessStartInfo processStartInfo)
         {
+            processStartInfo.FileName = Dotnet;
+            TempDirectory workDir = null;
+            if (string.IsNullOrEmpty(processStartInfo.WorkingDirectory))
+            {
+                workDir = new TempDirectory();
+                processStartInfo.WorkingDirectory = workDir.FullName;
+            }
+
+            processStartInfo.UseShellExecute = false;
+            processStartInfo.RedirectStandardOutput = true;
+            processStartInfo.RedirectStandardError = true;
             var guid = Path.GetFileName(processStartInfo.WorkingDirectory) ?? "unknown";
             _logger.LogInformation("{Guid}: {Command} {Args}", guid, processStartInfo.FileName,
                 processStartInfo.Arguments);
@@ -139,14 +127,15 @@ namespace Steeltoe.DotNetToolService.Controllers
             }
 
             await proc.WaitForExitAsync();
-            if (proc.ExitCode != 0)
+            workDir?.Dispose();
+            if (proc.ExitCode == 0)
             {
-                var error = await proc.StandardError.ReadToEndAsync();
-                _logger.LogInformation("{Guid}: {Error}", guid, error);
-                return NotFound(error);
+                return Content(await proc.StandardOutput.ReadToEndAsync());
             }
 
-            return Content(await proc.StandardOutput.ReadToEndAsync());
+            var error = await proc.StandardError.ReadToEndAsync();
+            _logger.LogInformation("{Guid}: {Error}", guid, error);
+            return NotFound(error);
         }
     }
 }

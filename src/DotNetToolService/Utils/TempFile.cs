@@ -2,31 +2,32 @@ using System.IO;
 
 namespace Steeltoe.DotNetToolService.Utils
 {
-    public sealed class TempDirectory : TempPath
+    public sealed class TempFile : TempPath
     {
-        public TempDirectory() : this(true)
+        public TempFile() : this(true)
         {
         }
 
-        public TempDirectory(bool create)
+        public TempFile(bool create)
         {
             if (create)
             {
-                Directory.CreateDirectory(FullName);
+                File.Create(FullName).Dispose();
             }
         }
 
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            if (!(Directory.Exists(FullName)))
+
+            if (!(File.Exists(FullName)))
             {
                 return;
             }
 
             try
             {
-                Directory.Delete(FullName, true);
+                File.Delete(FullName);
             }
             catch
             {
