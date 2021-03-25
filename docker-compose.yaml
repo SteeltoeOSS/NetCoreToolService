@@ -5,4 +5,4 @@ services:
     environment:
       DOTNET_ENVIRONMENT: Development
     ports:
-      - "1921:1921"
+      - "1921:80"

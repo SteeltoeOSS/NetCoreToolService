@@ -8,4 +8,4 @@ RUN dotnet publish -c release -o /srv --no-restore
 FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine
 WORKDIR /srv
 COPY --from=build /srv .
-ENTRYPOINT ["dotnet", "Steeltoe.DotNetToolService.dll", "--urls=http://0.0.0.0:1921"]
+ENTRYPOINT ["dotnet", "Steeltoe.DotNetToolService.dll", "--urls=http://0.0.0.0:80"]
