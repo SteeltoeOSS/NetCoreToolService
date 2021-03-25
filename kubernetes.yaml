@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dotnet-tool-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dotnet-tool-service
+  template:
+    metadata:
+      labels:
+        app: dotnet-tool-service
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
+      containers:
+      - name: dotnet-tool-service
+        image: steeltoe.azurecr.io/dotnet-tool-service
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dotnet-tool-service
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: dotnet-tool-service
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: dotnet-tool-service
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+  - host: dotnet-tool-staging.steeltoe.io
+    http:
+      paths:
+      - path: /(.*)
+        backend:
+          serviceName: dotnet-tool-service
+          servicePort: 80
