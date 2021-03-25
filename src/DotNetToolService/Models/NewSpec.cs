@@ -1,4 +1,4 @@
-namespace Steeltoe.DotNetNewService.Models
+namespace Steeltoe.DotNetToolService.Models
 {
     public class NewSpec
     {

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace Steeltoe.DotNetNewService
+namespace Steeltoe.DotNetToolService
 {
     public class Program
     {

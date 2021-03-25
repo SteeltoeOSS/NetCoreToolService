@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Steeltoe.DotNetNewService.Models;
-using Steeltoe.DotNetNewService.Utils;
+using Steeltoe.DotNetToolService.Models;
+using Steeltoe.DotNetToolService.Utils;
 
-namespace Steeltoe.DotNetNewService.Controllers
+namespace Steeltoe.DotNetToolService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace Steeltoe.DotNetNewService.Utils
+namespace Steeltoe.DotNetToolService.Utils
 {
     public sealed class TempDirectory : IDisposable
     {

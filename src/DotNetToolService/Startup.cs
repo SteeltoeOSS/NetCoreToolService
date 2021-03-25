@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 
-namespace Steeltoe.DotNetNewService
+namespace Steeltoe.DotNetToolService
 {
     public class Startup
     {
@@ -27,7 +27,7 @@ namespace Steeltoe.DotNetNewService
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1",
-                    new OpenApiInfo { Title = "Steeltoe.InitializrDotNetNewService", Version = "v1" });
+                    new OpenApiInfo { Title = "Steeltoe.DotNetToolService", Version = "v1" });
             });
         }
 
@@ -38,7 +38,7 @@ namespace Steeltoe.DotNetNewService
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "InitializrDotNetNew v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "DotNetTool v1"));
             }
 
             app.UseHttpsRedirection();
