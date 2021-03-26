@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -27,12 +28,7 @@ namespace Steeltoe.DotNetToolService.Controllers
         [HttpGet]
         public async Task<ActionResult> GetTemplates()
         {
-            var pInfo = new ProcessStartInfo
-            {
-                ArgumentList = { "new", "--list" },
-            };
-
-            return await ProcessToResult(pInfo);
+            return Ok(await GetTemplateDictionary());
         }
 
         [HttpGet]
@@ -57,7 +53,7 @@ namespace Steeltoe.DotNetToolService.Controllers
                 WorkingDirectory = workDir.FullName,
             };
 
-            var result = await ProcessToResult(pInfo);
+            var result = await ProcessToResultAsync(pInfo);
             var ok = result as ContentResult;
             if (ok is null)
             {
@@ -77,15 +73,15 @@ namespace Steeltoe.DotNetToolService.Controllers
         }
 
         [HttpGet]
-        [Route("{id}/help")]
-        public async Task<ActionResult> GetTemplate(string id)
+        [Route("{template}/help")]
+        public async Task<ActionResult> GetTemplate(string template)
         {
             var pInfo = new ProcessStartInfo
             {
-                ArgumentList = { "new", id, "--help" },
+                ArgumentList = { "new", template, "--help" },
             };
 
-            return await ProcessToResult(pInfo);
+            return await ProcessToResultAsync(pInfo);
         }
 
         [HttpPost]
@@ -96,15 +92,59 @@ namespace Steeltoe.DotNetToolService.Controllers
                 return BadRequest("missing NuGet ID");
             }
 
+            var preInstallTemplates = await GetTemplateDictionary();
+
             var pInfo = new ProcessStartInfo
             {
                 ArgumentList = { "new", "--install", nuGetId },
             };
+            await ProcessToStringAsync(pInfo);
 
-            return await ProcessToResult(pInfo);
+            var postInstallTemplates = await GetTemplateDictionary();
+
+            foreach (var template in preInstallTemplates.Keys)
+            {
+                postInstallTemplates.Remove(template);
+            }
+
+            return Ok(postInstallTemplates);
         }
 
-        private async Task<ActionResult> ProcessToResult(ProcessStartInfo processStartInfo)
+        private async Task<Dictionary<string, TemplateInfo>> GetTemplateDictionary()
+        {
+            var pInfo = new ProcessStartInfo
+            {
+                ArgumentList = { "new", "--list" },
+            };
+            var listing = await ProcessToStringAsync(pInfo);
+            var lines = listing.Split('\n').ToList().FindAll(line => !string.IsNullOrWhiteSpace(line));
+            var headings = lines[1].Split("  ");
+            var nameColStart = 0;
+            var nameColLength = headings[0].Length;
+            var shortNameColStart = nameColStart + nameColLength + 2;
+            var shortNameColLength = headings[1].Length;
+            var languageColStart = shortNameColStart + shortNameColLength + 2;
+            var languageColLength = headings[2].Length;
+            var tagsColStart = languageColStart + languageColLength + 2;
+            var tagsColLength = headings[3].Length;
+            lines = lines.GetRange(2, lines.Count - 2);
+            lines = lines.GetRange(2, lines.Count - 2);
+
+            var dict = new Dictionary<string, TemplateInfo>();
+            foreach (var line in lines)
+            {
+                var templateInfo = new TemplateInfo();
+                var template = line.Substring(shortNameColStart, shortNameColLength).Trim();
+                templateInfo.Name = line.Substring(nameColStart, nameColLength).Trim();
+                templateInfo.Languages = line.Substring(languageColStart, languageColLength).Trim();
+                templateInfo.Tags = line.Substring(tagsColStart, tagsColLength).Trim();
+                dict.Add(template, templateInfo);
+            }
+
+            return dict;
+        }
+
+        private async Task<string> ProcessToStringAsync(ProcessStartInfo processStartInfo)
         {
             processStartInfo.FileName = Dotnet;
             TempDirectory workDir = null;
@@ -123,19 +163,52 @@ namespace Steeltoe.DotNetToolService.Controllers
             var proc = Process.Start(processStartInfo);
             if (proc is null)
             {
-                return StatusCode(StatusCodes.Status503ServiceUnavailable);
+                throw new ActionResultException(StatusCode(StatusCodes.Status503ServiceUnavailable));
             }
 
             await proc.WaitForExitAsync();
             workDir?.Dispose();
             if (proc.ExitCode == 0)
             {
-                return Content(await proc.StandardOutput.ReadToEndAsync());
+                var output = await proc.StandardOutput.ReadToEndAsync();
+                _logger.LogDebug("{Guid}>\n{Output}", guid, output);
+                return output;
             }
 
             var error = await proc.StandardError.ReadToEndAsync();
             _logger.LogInformation("{Guid}: {Error}", guid, error);
-            return NotFound(error);
+            throw new ActionResultException(NotFound(error));
+        }
+
+        private async Task<ActionResult> ProcessToResultAsync(ProcessStartInfo processStartInfo)
+        {
+            try
+            {
+                return Content(await ProcessToStringAsync(processStartInfo));
+            }
+            catch (ActionResultException e)
+            {
+                return e.ActionResult;
+            }
+        }
+    }
+
+    class TemplateInfo
+    {
+        public string Name { get; set; }
+
+        public string Languages { get; set; }
+
+        public string Tags { get; set; }
+    }
+
+    class ActionResultException : Exception
+    {
+        internal ActionResult ActionResult { get; }
+
+        internal ActionResultException(ActionResult actionResult)
+        {
+            ActionResult = actionResult;
         }
     }
 }
