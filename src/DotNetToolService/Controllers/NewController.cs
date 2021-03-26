@@ -171,7 +171,7 @@ namespace Steeltoe.DotNetToolService.Controllers
             if (proc.ExitCode == 0)
             {
                 var output = await proc.StandardOutput.ReadToEndAsync();
-                _logger.LogDebug("{Guid}>\n{Output}", guid, output);
+                _logger.LogInformation("{Guid}>\n{Output}", guid, output);
                 return output;
             }
 
