@@ -118,7 +118,8 @@ namespace Steeltoe.DotNetToolService.Controllers
             };
             var listing = await ProcessToStringAsync(pInfo);
             var lines = listing.Split('\n').ToList().FindAll(line => !string.IsNullOrWhiteSpace(line));
-            var headings = lines[1].Split("  ");
+            var headingIdx = lines.FindIndex(line => line.StartsWith("-"));
+            var headings = lines[headingIdx].Split("  ");
             var nameColStart = 0;
             var nameColLength = headings[0].Length;
             var shortNameColStart = nameColStart + nameColLength + 2;
@@ -127,8 +128,7 @@ namespace Steeltoe.DotNetToolService.Controllers
             var languageColLength = headings[2].Length;
             var tagsColStart = languageColStart + languageColLength + 2;
             var tagsColLength = headings[3].Length;
-            lines = lines.GetRange(2, lines.Count - 2);
-            lines = lines.GetRange(2, lines.Count - 2);
+            lines = lines.GetRange(headingIdx + 1, lines.Count - headingIdx - 1);
 
             var dict = new Dictionary<string, TemplateInfo>();
             foreach (var line in lines)
@@ -200,6 +200,11 @@ namespace Steeltoe.DotNetToolService.Controllers
         public string Languages { get; set; }
 
         public string Tags { get; set; }
+
+        public override string ToString()
+        {
+            return $"[name={Name},languages={Languages},tags={Tags}";
+        }
     }
 
     class ActionResultException : Exception
