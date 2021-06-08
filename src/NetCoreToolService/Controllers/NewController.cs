@@ -120,9 +120,8 @@ namespace Steeltoe.NetCoreToolService.Controllers
             var lines = listing.Split('\n').ToList().FindAll(line => !string.IsNullOrWhiteSpace(line));
             var headingIdx = lines.FindIndex(line => line.StartsWith("-"));
             var headings = lines[headingIdx].Split("  ");
-            var nameColStart = 0;
             var nameColLength = headings[0].Length;
-            var shortNameColStart = nameColStart + nameColLength + 2;
+            var shortNameColStart = nameColLength + 2;
             var shortNameColLength = headings[1].Length;
             var languageColStart = shortNameColStart + shortNameColLength + 2;
             var languageColLength = headings[2].Length;
@@ -135,7 +134,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
             {
                 var templateInfo = new TemplateInfo();
                 var template = line.Substring(shortNameColStart, shortNameColLength).Trim();
-                templateInfo.Name = line.Substring(nameColStart, nameColLength).Trim();
+                templateInfo.Name = line.Substring(0, nameColLength).Trim();
                 templateInfo.Languages = line.Substring(languageColStart, languageColLength).Trim();
                 templateInfo.Tags = line.Substring(tagsColStart, tagsColLength).Trim();
                 dict.Add(template, templateInfo);
