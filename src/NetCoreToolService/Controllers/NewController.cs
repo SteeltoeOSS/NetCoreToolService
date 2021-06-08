@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Steeltoe.DotNetToolService.Utils;
+using Steeltoe.NetCoreToolService.Utils;
 
-namespace Steeltoe.DotNetToolService.Controllers
+namespace Steeltoe.NetCoreToolService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

@@ -5,7 +5,7 @@ VisualStudioVersion = 16.6.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C742A7B8-80CA-4365-85CA-C29AA744CE54}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steeltoe.DotNetToolService", "src\DotNetToolService\Steeltoe.DotNetToolService.csproj", "{1462EDFE-F1FC-48C2-80C1-917317EE3C97}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steeltoe.NetCoreToolService", "src\NetCoreToolService\Steeltoe.NetCoreToolService.csproj", "{1462EDFE-F1FC-48C2-80C1-917317EE3C97}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace Steeltoe.DotNetToolService.Utils
+namespace Steeltoe.NetCoreToolService.Utils
 {
     public abstract class TempPath : IDisposable
     {
