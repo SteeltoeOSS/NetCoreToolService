@@ -10,13 +10,6 @@ namespace Steeltoe.NetCoreToolService.Services
     public interface IArchiver
     {
         /// <summary>
-        /// Returns the archive as a byte array.
-        /// </summary>
-        /// <param name="path">Path to be archived.</param>
-        /// <returns>A new stream containing the archive.</returns>
-        byte[] ToBytes(string path);
-
-        /// <summary>
         /// Gets the name for the archive format.
         /// </summary>
         string Name { get; }
@@ -30,5 +23,12 @@ namespace Steeltoe.NetCoreToolService.Services
         /// Gets the mime type for the archive.
         /// </summary>
         string MimeType { get; }
+
+        /// <summary>
+        /// Returns the archive as a byte array.
+        /// </summary>
+        /// <param name="path">Path to be archived.</param>
+        /// <returns>A new stream containing the archive.</returns>
+        byte[] ToBytes(string path);
     }
 }

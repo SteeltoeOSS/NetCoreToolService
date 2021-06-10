@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
+using Steeltoe.NetCoreToolService.Services;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
-using Steeltoe.NetCoreToolService.Services;
 
 namespace Steeltoe.NetCoreToolService.Archivers
 {
@@ -15,14 +15,8 @@ namespace Steeltoe.NetCoreToolService.Archivers
     public class ZipArchiver : IArchiver
     {
         /* ----------------------------------------------------------------- *
-         * properties                                                        *
+         * fields                                                            *
          * ----------------------------------------------------------------- */
-
-        public string Name => "zip";
-
-        public string FileExtension => ".zip";
-
-        public string MimeType => "application/zip";
 
         /* ----------------------------------------------------------------- *
          * Fix UNIX permissions in Zip archive extraction                    *
@@ -33,10 +27,6 @@ namespace Steeltoe.NetCoreToolService.Archivers
          * ----------------------------------------------------------------- */
         private const int UnixFilePermissions = 0b_0000_0001_1010_0100_0000_0000_0000_0000;
         private const int UnixDirectoryPermissions = 0b_0000_0001_1110_1101_0000_0000_0000_0000;
-
-        /* ----------------------------------------------------------------- *
-         * fields                                                             *
-         * ----------------------------------------------------------------- */
 
         private readonly CompressionLevel _compression;
 
@@ -52,6 +42,25 @@ namespace Steeltoe.NetCoreToolService.Archivers
         {
             _compression = compression;
         }
+
+        /* ----------------------------------------------------------------- *
+         * properties                                                        *
+         * ----------------------------------------------------------------- */
+
+        /// <summary>
+        /// Gets the name of the ZipArchiver ("zip").
+        /// </summary>
+        public string Name => "zip";
+
+        /// <summary>
+        /// Gets the file extension for the ZipArchiver (".zip").
+        /// </summary>
+        public string FileExtension => ".zip";
+
+        /// <summary>
+        /// Gets the MIME type for the ZipArchiver ("application/zip").
+        /// </summary>
+        public string MimeType => "application/zip";
 
         /* ----------------------------------------------------------------- *
          * methods                                                           *
