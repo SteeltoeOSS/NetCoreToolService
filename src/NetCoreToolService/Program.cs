@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Steeltoe.NetCoreToolService.Services;
 
 namespace Steeltoe.NetCoreToolService
 {
@@ -7,7 +9,9 @@ namespace Steeltoe.NetCoreToolService
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            var host = CreateHostBuilder(args).Build();
+            host.Services.GetRequiredService<IArchiverRegistry>().Initialize();
+            host.Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

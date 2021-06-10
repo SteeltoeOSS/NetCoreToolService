@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Steeltoe.NetCoreToolService.Services;
 using Steeltoe.NetCoreToolService.Utils;
 
 namespace Steeltoe.NetCoreToolService.Controllers
@@ -16,24 +16,27 @@ namespace Steeltoe.NetCoreToolService.Controllers
     [Route("api/[controller]")]
     public class NewController : ControllerBase
     {
+        private readonly IArchiverRegistry _archiverRegistry;
+
         private readonly ILogger<NewController> _logger;
 
         private static readonly string Dotnet = "dotnet";
 
-        public NewController(ILogger<NewController> logger)
+        public NewController(IArchiverRegistry archiverRegistry, ILogger<NewController> logger)
         {
+            _archiverRegistry = archiverRegistry;
             _logger = logger;
         }
 
         [HttpGet]
         public async Task<ActionResult> GetTemplates()
         {
-            return Ok(await GetTemplateDictionary());
+            return Ok(await GetTemplateList());
         }
 
         [HttpGet]
         [Route("{template}")]
-        public async Task<ActionResult> GetProject(string template, string options)
+        public async Task<ActionResult> GetTemplateProject(string template, string options)
         {
             var opts = options?.Split(',').Select(opt => opt.Trim()).ToList() ?? new List<string>();
             var pArgs = new List<string>() { "new", template };
@@ -65,16 +68,21 @@ namespace Steeltoe.NetCoreToolService.Controllers
                 return NotFound($"template {template} does not exist");
             }
 
-            using var zipFile = new TempFile(false);
-            ZipFile.CreateFromDirectory(workDir.FullName, zipFile.FullName);
 
-            var bytes = await System.IO.File.ReadAllBytesAsync(zipFile.FullName);
-            return File(bytes, "application/zip", $"{name}.zip");
+            var archivalType = "zip";
+            var archiver = _archiverRegistry.Lookup(archivalType);
+            if (archiver is null)
+            {
+                return NotFound($"Packaging '{archivalType}' not found.");
+            }
+
+            var archiveBytes = archiver.ToBytes(workDir.FullName);
+            return File(archiveBytes,archiver.MimeType, $"{name}{archiver.FileExtension}");
         }
 
         [HttpGet]
         [Route("{template}/help")]
-        public async Task<ActionResult> GetTemplate(string template)
+        public async Task<ActionResult> GetTemplateHelp(string template)
         {
             var pInfo = new ProcessStartInfo
             {
@@ -85,14 +93,14 @@ namespace Steeltoe.NetCoreToolService.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> PostTemplate(string nuGetId)
+        public async Task<ActionResult> InstallTemplate(string nuGetId)
         {
             if (nuGetId is null)
             {
                 return BadRequest("missing NuGet ID");
             }
 
-            var preInstallTemplates = await GetTemplateDictionary();
+            var preInstallTemplates = await GetTemplateList();
 
             var pInfo = new ProcessStartInfo
             {
@@ -100,7 +108,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
             };
             await ProcessToStringAsync(pInfo);
 
-            var postInstallTemplates = await GetTemplateDictionary();
+            var postInstallTemplates = await GetTemplateList();
 
             foreach (var template in preInstallTemplates.Keys)
             {
@@ -110,7 +118,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
             return Ok(postInstallTemplates);
         }
 
-        private async Task<Dictionary<string, TemplateInfo>> GetTemplateDictionary()
+        private async Task<Dictionary<string, TemplateInfo>> GetTemplateList()
         {
             var pInfo = new ProcessStartInfo
             {

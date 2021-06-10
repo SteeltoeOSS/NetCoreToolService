@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Steeltoe.NetCoreToolService.Archivers;
+using Steeltoe.NetCoreToolService.Services;
 
 namespace Steeltoe.NetCoreToolService
 {
@@ -24,6 +26,7 @@ namespace Steeltoe.NetCoreToolService
                 options.JsonSerializerOptions.IgnoreNullValues = true;
                 options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
             });
+            services.AddSingleton<IArchiverRegistry, ArchiverRegistry>();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1",
