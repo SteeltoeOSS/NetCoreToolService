@@ -6,7 +6,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace Steeltoe.NetCoreToolService.Utils
+namespace Steeltoe.NetCoreToolService.Utils.IO
 {
     /// <summary>
     /// An abstraction of temp files.

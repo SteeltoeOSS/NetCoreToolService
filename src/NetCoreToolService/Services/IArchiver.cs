@@ -10,25 +10,25 @@ namespace Steeltoe.NetCoreToolService.Services
     public interface IArchiver
     {
         /// <summary>
-        /// Gets the name for the archive format.
+        /// Gets the name for the archiver, e.g. <c>"zip"</c>.
         /// </summary>
         string Name { get; }
 
         /// <summary>
-        /// Gets the file extension for the archive.
+        /// Gets the file extension for the archive, e.g. <c>".zip"</c>.
         /// </summary>
         string FileExtension { get; }
 
         /// <summary>
-        /// Gets the mime type for the archive.
+        /// Gets the mime type for the archive, e.g. <c>"application/zip"</c>.
         /// </summary>
         string MimeType { get; }
 
         /// <summary>
-        /// Returns the archive as a byte array.
+        /// Returns an archive of the files rooted at <c>path</c> as a byte array.
         /// </summary>
         /// <param name="path">Path to be archived.</param>
-        /// <returns>A new stream containing the archive.</returns>
+        /// <returns>A byte array containing the archive.</returns>
         byte[] ToBytes(string path);
     }
 }

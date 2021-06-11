@@ -4,7 +4,7 @@
 
 using System.IO;
 
-namespace Steeltoe.NetCoreToolService.Utils
+namespace Steeltoe.NetCoreToolService.Utils.IO
 {
     /// <summary>
     /// A temp directory.

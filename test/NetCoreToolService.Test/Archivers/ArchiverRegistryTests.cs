@@ -4,9 +4,7 @@
 
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using Steeltoe.NetCoreToolService.Archivers;
-using Steeltoe.NetCoreToolService.Services;
 using Xunit;
 
 namespace Steeltoe.NetCoreToolService.Test.Archivers
@@ -22,7 +20,6 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
         {
             // Arrange
             var registry = new ArchiverRegistry(new NullLogger<ArchiverRegistry>());
-            registry.Initialize();
 
             // Act
             var archiver = registry.Lookup("zip");
@@ -30,30 +27,6 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
             // Assert
             archiver.Should().NotBeNull();
             archiver.Should().BeOfType<ZipArchiver>();
-        }
-
-        [Fact]
-        public void Initialize_Should_Reset_State()
-        {
-            // Arrange
-            var registry = new ArchiverRegistry(new NullLogger<ArchiverRegistry>());
-            registry.Initialize();
-            var myArchiver = new Mock<IArchiver>();
-            myArchiver.Setup(a => a.Name).Returns("Joe");
-            registry.Register(myArchiver.Object);
-
-            // Act
-            var archiver = registry.Lookup("Joe");
-
-            // Assert
-            archiver.Should().NotBeNull();
-
-            // Act
-            registry.Initialize();
-            archiver = registry.Lookup("Joe");
-
-            // Assert
-            archiver.Should().BeNull();
         }
 
         /* ----------------------------------------------------------------- *
@@ -65,7 +38,6 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
         {
             // Arrange
             var registry = new ArchiverRegistry(new NullLogger<ArchiverRegistry>());
-            registry.Initialize();
 
             // Act
             var archiver = registry.Lookup("unknown");

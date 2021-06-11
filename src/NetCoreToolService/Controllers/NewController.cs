@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Steeltoe.NetCoreToolService.Services;
-using Steeltoe.NetCoreToolService.Utils;
+using Steeltoe.NetCoreToolService.Utils.IO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,8 +23,6 @@ namespace Steeltoe.NetCoreToolService.Controllers
     [Route("api/[controller]")]
     public class NewController : ControllerBase
     {
-        private static readonly string NetCoreToolCommand = "dotnet";
-
         private readonly IArchiverRegistry _archiverRegistry;
 
         private readonly ILogger<NewController> _logger;
@@ -185,7 +183,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
 
         private async Task<string> ProcessToStringAsync(ProcessStartInfo processStartInfo)
         {
-            processStartInfo.FileName = NetCoreToolCommand;
+            processStartInfo.FileName = NetCoreTool.Command;
             TempDirectory workDir = null;
             if (string.IsNullOrEmpty(processStartInfo.WorkingDirectory))
             {

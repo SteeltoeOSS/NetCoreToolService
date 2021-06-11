@@ -5,9 +5,21 @@
 namespace Steeltoe.NetCoreToolService.Services
 {
     /// <summary>
-    /// Contract for a archiver registry implementations.
+    /// Contract for archiver registry implementations.
     /// </summary>
-    public interface IArchiverRegistry : IRegistry<IArchiver, string>
+    public interface IArchiverRegistry
     {
+        /// <summary>
+        /// Registers the archiver.
+        /// </summary>
+        /// <param name="value">The archiver to register.</param>
+        void Register(IArchiver value);
+
+        /// <summary>
+        /// Look for an archiver with the specified name.
+        /// </summary>
+        /// <param name="name">The name of the archiver to loookup.</param>
+        /// <returns>The named archiver,or <c>null</c> if no value found.</returns>
+        IArchiver Lookup(string name);
     }
 }

@@ -6,7 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using FluentAssertions;
 using Steeltoe.NetCoreToolService.Archivers;
-using Steeltoe.NetCoreToolService.Utils;
+using Steeltoe.NetCoreToolService.Utils.IO;
 using Xunit;
 
 namespace Steeltoe.NetCoreToolService.Test.Archivers

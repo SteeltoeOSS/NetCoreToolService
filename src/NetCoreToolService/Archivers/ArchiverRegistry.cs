@@ -11,10 +11,10 @@ namespace Steeltoe.NetCoreToolService.Archivers
     /// <summary>
     /// An in-memory <see cref="IArchiverRegistry"/> implementation.
     /// </summary>
-    public class ArchiverRegistry : InitializrApiServiceBase, IArchiverRegistry
+    public class ArchiverRegistry : Service, IArchiverRegistry
     {
         /* ----------------------------------------------------------------- *
-         * fields                                                            *
+         * fields                                                             *
          * ----------------------------------------------------------------- */
 
         private readonly Dictionary<string, IArchiver> _archivers = new Dictionary<string, IArchiver>();
@@ -30,20 +30,13 @@ namespace Steeltoe.NetCoreToolService.Archivers
         public ArchiverRegistry(ILogger<ArchiverRegistry> logger)
             : base(logger)
         {
+            Logger.LogInformation("Initializing archiver registry");
+            Register(new ZipArchiver());
         }
 
         /* ----------------------------------------------------------------- *
          * methods                                                           *
          * ----------------------------------------------------------------- */
-
-        /// <inheritdoc />
-        public void Initialize()
-        {
-            Logger.LogInformation("Initializing archiver registry");
-
-            _archivers.Clear();
-            Register(new ZipArchiver());
-        }
 
         /// <inheritdoc />
         public void Register(IArchiver archiver)

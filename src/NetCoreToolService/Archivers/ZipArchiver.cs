@@ -15,7 +15,7 @@ namespace Steeltoe.NetCoreToolService.Archivers
     public class ZipArchiver : IArchiver
     {
         /* ----------------------------------------------------------------- *
-         * fields                                                            *
+         * fields                                                             *
          * ----------------------------------------------------------------- */
 
         /* ----------------------------------------------------------------- *
@@ -70,9 +70,11 @@ namespace Steeltoe.NetCoreToolService.Archivers
         public byte[] ToBytes(string path)
         {
             using var buffer = new MemoryStream();
-            var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true);
-            AddPathToArchive(archive, path);
-            archive.Dispose();
+            using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true))
+            {
+                AddPathToArchive(archive, path);
+            }
+
             buffer.Seek(0, SeekOrigin.Begin);
             return buffer.ToArray();
         }

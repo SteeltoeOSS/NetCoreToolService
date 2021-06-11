@@ -7,15 +7,15 @@ using Microsoft.Extensions.Logging;
 namespace Steeltoe.NetCoreToolService.Services
 {
     /// <summary>
-    /// Base class for InitializrApi services.
+    /// Base class for services.
     /// </summary>
-    public abstract class InitializrApiServiceBase
+    public abstract class Service
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="InitializrApiServiceBase"/> class.
+        /// Initializes a new instance of the <see cref="Service"/> class.
         /// </summary>
         /// <param name="logger">Injected logger.</param>
-        protected InitializrApiServiceBase(ILogger logger)
+        protected Service(ILogger logger)
         {
             Logger = logger;
         }
