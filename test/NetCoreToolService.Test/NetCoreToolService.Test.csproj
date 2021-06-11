@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <RootNamespace>Steeltoe.NetCoreToolService.Test</RootNamespace>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="..\Directory.Build.props">
       <Link>Directory.Build.props</Link>
@@ -7,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NetCoreToolService\Steeltoe.NetCoreToolService.csproj" />
+    <ProjectReference Include="..\..\src\NetCoreToolService\NetCoreToolService.csproj" />
   </ItemGroup>
 
 </Project>
