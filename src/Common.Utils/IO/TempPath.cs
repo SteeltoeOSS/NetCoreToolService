@@ -4,22 +4,23 @@
 
 using System;
 using System.IO;
-using System.Reflection;
 
-namespace Steeltoe.NetCoreToolService.Utils.IO
+namespace Steeltoe.Common.Utils.IO
 {
     /// <summary>
-    /// An abstraction of temp files.
+    /// An abstraction of a temporary path, such as a file.
     /// </summary>
     public abstract class TempPath : IDisposable
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="TempPath"/> class.
         /// </summary>
-        protected TempPath()
+        /// <param name="prefix">Temporary path prefix.</param>
+        protected TempPath(string prefix = null)
         {
-            Name = Guid.NewGuid().ToString();
-            FullName = Path.Join(Path.GetTempPath(), Assembly.GetExecutingAssembly().GetName().Name, Name);
+            Name = $"{prefix ?? string.Empty}{Guid.NewGuid()}";
+            FullPath = $"{Path.GetTempPath()}{Path.DirectorySeparatorChar}{Name}";
+            Initialize();
         }
 
         /// <summary>
@@ -31,17 +32,17 @@ namespace Steeltoe.NetCoreToolService.Utils.IO
         }
 
         /// <summary>
-        /// Gets the full name of this path.
+        /// Gets the absolute path of the TempPath.
         /// </summary>
-        public string FullName { get; }
+        public string FullPath { get; }
 
         /// <summary>
-        /// Gets the name of this path.
+        /// Gets the name of the TempPath.
         /// </summary>
         public string Name { get; }
 
         /// <summary>
-        /// Ensures the underlying temporary path is deleted.
+        /// Ensures the temporary path is deleted.
         /// </summary>
         public void Dispose()
         {
@@ -49,7 +50,7 @@ namespace Steeltoe.NetCoreToolService.Utils.IO
         }
 
         /// <summary>
-        /// Ensures the underlying temporary path is deleted.
+        /// Ensures the temporary path is deleted.
         /// </summary>
         /// <param name="disposing">If disposing.</param>
         protected virtual void Dispose(bool disposing)
@@ -58,6 +59,18 @@ namespace Steeltoe.NetCoreToolService.Utils.IO
             {
                 GC.SuppressFinalize(this);
             }
+        }
+
+        /// <summary>
+        /// Subclasses should override and perform any path initialization here.
+        /// </summary>
+        protected virtual void InitializePath()
+        {
+        }
+
+        private void Initialize()
+        {
+            InitializePath();
         }
     }
 }

@@ -4,45 +4,42 @@
 
 using System.IO;
 
-namespace Steeltoe.NetCoreToolService.Utils.IO
+namespace Steeltoe.Common.Utils.IO
 {
     /// <summary>
-    /// A temp directory.
+    /// A temporary directory.
     /// </summary>
-    public sealed class TempDirectory : TempPath
+    public class TempDirectory : TempPath
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="TempDirectory"/> class.
         /// </summary>
-        public TempDirectory()
-            : this(true)
+        /// <param name="prefix">Temporary directory prefix.</param>
+        public TempDirectory(string prefix = null)
+            : base(prefix)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="TempDirectory"/> class.
+        /// Creates the temporary directory.
         /// </summary>
-        /// <param name="create">If true, create the directory.</param>
-        public TempDirectory(bool create)
+        protected override void InitializePath()
         {
-            if (create)
-            {
-                Directory.CreateDirectory(FullName);
-            }
+            Directory.CreateDirectory(FullPath);
         }
 
         /// <inheritdoc/>
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            if (!Directory.Exists(FullName))
+            if (!Directory.Exists(FullPath))
             {
                 return;
             }
 
             try
             {
-                Directory.Delete(FullName, true);
+                Directory.Delete(FullPath, true);
             }
             catch
             {

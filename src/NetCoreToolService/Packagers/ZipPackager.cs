@@ -2,17 +2,16 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using Steeltoe.NetCoreToolService.Services;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 
-namespace Steeltoe.NetCoreToolService.Archivers
+namespace Steeltoe.NetCoreToolService.Packagers
 {
     /// <summary>
-    /// An <see cref="IArchiver"/> implementation using the ZIP archive file format.
+    /// An <see cref="IPackager"/> implementation using the ZIP archive file format.
     /// </summary>
-    public class ZipArchiver : IArchiver
+    public class ZipPackager : IPackager
     {
         /* ----------------------------------------------------------------- *
          * fields                                                             *
@@ -35,10 +34,10 @@ namespace Steeltoe.NetCoreToolService.Archivers
          * ----------------------------------------------------------------- */
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ZipArchiver"/> class.
+        /// Initializes a new instance of the <see cref="ZipPackager"/> class.
         /// </summary>
         /// <param name="compression">Compression level default <see cref="CompressionLevel.Fastest"/>.</param>
-        public ZipArchiver(CompressionLevel compression = CompressionLevel.Fastest)
+        public ZipPackager(CompressionLevel compression = CompressionLevel.Fastest)
         {
             _compression = compression;
         }

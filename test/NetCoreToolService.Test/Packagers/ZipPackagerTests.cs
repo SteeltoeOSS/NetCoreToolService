@@ -5,13 +5,13 @@
 using System.IO;
 using System.IO.Compression;
 using FluentAssertions;
-using Steeltoe.NetCoreToolService.Archivers;
-using Steeltoe.NetCoreToolService.Utils.IO;
+using Steeltoe.Common.Utils.IO;
+using Steeltoe.NetCoreToolService.Packagers;
 using Xunit;
 
-namespace Steeltoe.NetCoreToolService.Test.Archivers
+namespace Steeltoe.NetCoreToolService.Test.Packagers
 {
-    public class ZipArchiverTests
+    public class ZipPackagerTests
     {
         /* ----------------------------------------------------------------- *
          * positive tests                                                    *
@@ -21,11 +21,11 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
         public void ToStream_Should_Create_Zip_Archive()
         {
             // Arrange
-            var archiver = new ZipArchiver();
+            var archiver = new ZipPackager();
             var tempDir = new TempDirectory();
 
             // Act
-            var buf = archiver.ToBytes(tempDir.FullName);
+            var buf = archiver.ToBytes(tempDir.FullPath);
 
             // Assert
             new ZipArchive(new MemoryStream(buf)).Should().BeOfType<ZipArchive>();
@@ -35,15 +35,15 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
         public void ToStream_Should_Archive_File_Contents()
         {
             // Arrange
-            var archiver = new ZipArchiver();
+            var archiver = new ZipPackager();
             using var tempDir = new TempDirectory();
-            var d1 = Path.Join(tempDir.FullName, "d1");
+            var d1 = Path.Join(tempDir.FullPath, "d1");
             Directory.CreateDirectory(d1);
             var f1 = Path.Join(d1, "f1");
             File.WriteAllText(f1, "f1 stuff");
 
             // Act
-            var buf = archiver.ToBytes(tempDir.FullName);
+            var buf = archiver.ToBytes(tempDir.FullPath);
 
             // Assert
             var zip = new ZipArchive(new MemoryStream(buf));
@@ -64,15 +64,15 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
         public void ToStream_Should_Archive_Directories()
         {
             // Arrange
-            var archiver = new ZipArchiver();
+            var archiver = new ZipPackager();
             using var tempDir = new TempDirectory();
-            var d1 = Path.Join(tempDir.FullName, "d1");
+            var d1 = Path.Join(tempDir.FullPath, "d1");
             Directory.CreateDirectory(d1);
             var d2 = Path.Join(d1, "d2");
             Directory.CreateDirectory(d2);
 
             // Act
-            var buf = archiver.ToBytes(tempDir.FullName);
+            var buf = archiver.ToBytes(tempDir.FullPath);
 
             // Assert
             var zip = new ZipArchive(new MemoryStream(buf));
@@ -92,7 +92,7 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
         public void GetPackaging_Should_Be_application_zip()
         {
             // Arrange
-            var archiver = new ZipArchiver();
+            var archiver = new ZipPackager();
 
             // Act
             var packaging = archiver.Name;
@@ -105,7 +105,7 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
         public void GetFileExtension_Should_Be_zip()
         {
             // Arrange
-            var archiver = new ZipArchiver();
+            var archiver = new ZipPackager();
 
             // Act
             var ext = archiver.FileExtension;
@@ -118,7 +118,7 @@ namespace Steeltoe.NetCoreToolService.Test.Archivers
         public void MimeType_Should_Be_application_zip()
         {
             // Arrange
-            var archiver = new ZipArchiver();
+            var archiver = new ZipPackager();
 
             // Act
             var ext = archiver.MimeType;

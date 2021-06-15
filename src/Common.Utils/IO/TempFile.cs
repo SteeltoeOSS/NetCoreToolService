@@ -4,31 +4,28 @@
 
 using System.IO;
 
-namespace Steeltoe.NetCoreToolService.Utils.IO
+namespace Steeltoe.Common.Utils.IO
 {
     /// <summary>
-    /// A temp file.
+    /// A temporary directory.
     /// </summary>
-    public sealed class TempFile : TempPath
+    public class TempFile : TempPath
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="TempFile"/> class.
         /// </summary>
-        public TempFile()
-            : this(true)
+        /// <param name="prefix">Temporary file prefix.</param>
+        public TempFile(string prefix = null)
+            : base(prefix)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="TempFile"/> class.
+        /// Creates the temporary file.
         /// </summary>
-        /// <param name="create">If true, create file.</param>
-        public TempFile(bool create)
+        protected override void InitializePath()
         {
-            if (create)
-            {
-                File.Create(FullName).Dispose();
-            }
+            File.Create(FullPath).Dispose();
         }
 
         /// <inheritdoc/>
@@ -36,14 +33,14 @@ namespace Steeltoe.NetCoreToolService.Utils.IO
         {
             base.Dispose(disposing);
 
-            if (!File.Exists(FullName))
+            if (!File.Exists(FullPath))
             {
                 return;
             }
 
             try
             {
-                File.Delete(FullName);
+                File.Delete(FullPath);
             }
             catch
             {

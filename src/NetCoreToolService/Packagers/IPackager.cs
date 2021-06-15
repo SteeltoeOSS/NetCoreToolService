@@ -2,33 +2,33 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-namespace Steeltoe.NetCoreToolService.Services
+namespace Steeltoe.NetCoreToolService.Packagers
 {
     /// <summary>
-    /// Contract for archiver implementations.
+    /// Contract for packager implementations.
     /// </summary>
-    public interface IArchiver
+    public interface IPackager
     {
         /// <summary>
-        /// Gets the name for the archiver, e.g. <c>"zip"</c>.
+        /// Gets the name for the packager, e.g. <c>"zip"</c>.
         /// </summary>
         string Name { get; }
 
         /// <summary>
-        /// Gets the file extension for the archive, e.g. <c>".zip"</c>.
+        /// Gets the file extension for package, e.g. <c>".zip"</c>.
         /// </summary>
         string FileExtension { get; }
 
         /// <summary>
-        /// Gets the mime type for the archive, e.g. <c>"application/zip"</c>.
+        /// Gets the mime type for a package, e.g. <c>"application/zip"</c>.
         /// </summary>
         string MimeType { get; }
 
         /// <summary>
-        /// Returns an archive of the files rooted at <c>path</c> as a byte array.
+        /// Returns a package of the files rooted at <c>path</c> as a byte array.
         /// </summary>
-        /// <param name="path">Path to be archived.</param>
-        /// <returns>A byte array containing the archive.</returns>
+        /// <param name="path">Path to be packaged.</param>
+        /// <returns>A byte array containing the package.</returns>
         byte[] ToBytes(string path);
     }
 }
