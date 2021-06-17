@@ -1,8 +1,8 @@
 version: "3"
 services:
-  initializr-dotnet-new:
+  net-core-tool-service:
     build: .
     environment:
       DOTNET_ENVIRONMENT: Development
     ports:
-      - "1921:80"
+      - "1922:80"
