@@ -413,7 +413,7 @@ No templates found matching: 'nosuchtemplate'.
         }
 
         [Fact]
-        public async Task GetTemplateProject_UnknownSwitch_Should_Return_NotFound()
+        public async Task GetTemplateProject_UnknownSwitch1_Should_Return_NotFound()
         {
             // Arrange
             var executor = new Mock<ICommandExecutor>();
@@ -427,6 +427,34 @@ No templates found matching: 'nosuchtemplate'.
 Invalid input switch:
   --unknown-switch
 For a list of valid options, run 'dotnet new webapi --help'.
+",
+                    }
+                );
+            var controller = new NewController(executor.Object);
+
+            // Act
+            var result = await controller.GetTemplateProject("mytemplate", "unknown-switch");
+
+            // Assert
+            var notFound = Assert.IsType<NotFoundObjectResult>(result);
+            notFound.Value.Should().Be("Switch 'unknown-switch' not found.");
+        }
+
+        [Fact]
+        public async Task GetTemplateProject_UnknownSwitch2_Should_Return_NotFound()
+        {
+            // Arrange
+            var executor = new Mock<ICommandExecutor>();
+            executor.Setup(c =>
+                    c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Sample --unknown-switch",
+                        It.IsAny<string>(), -1))
+                .ReturnsAsync(new CommandResult
+                    {
+                        ExitCode = 5,
+                        Error = @"
+Error: Invalid option(s):
+--unknown-switch
+   '--unknown-switch' is not a valid option
 ",
                     }
                 );

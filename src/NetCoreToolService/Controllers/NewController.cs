@@ -194,6 +194,16 @@ namespace Steeltoe.NetCoreToolService.Controllers
                     return NotFound($"Template '{template}' not found.");
                 }
 
+                const string invalidOptionError = "Invalid option(s)";
+                if (newCommand.Error.Contains(invalidOptionError))
+                {
+                    var start = newCommand.Error.IndexOf(invalidOptionError, StringComparison.Ordinal) +
+                                invalidOptionError.Length;
+                    start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
+                    var end = newCommand.Error.IndexOf('\n', start);
+                    return NotFound($"Switch '{newCommand.Error[start..end]}' not found.");
+                }
+
                 const string invalidSwitchError = "Invalid input switch:";
                 if (newCommand.Error.Contains(invalidSwitchError))
                 {
