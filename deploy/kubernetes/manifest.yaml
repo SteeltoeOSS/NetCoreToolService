@@ -20,6 +20,9 @@ spec:
         image: steeltoe.azurecr.io/net-core-tool-service
         ports:
         - containerPort: 80
+        env:
+        - name: DOTNET_ENVIRONMENT
+          value: "Staging"
 ---
 apiVersion: v1
 kind: Service
