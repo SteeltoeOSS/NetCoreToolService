@@ -14,4 +14,5 @@ RUN dotnet new --install NetCoreToolTemplates/src/Content
 
 WORKDIR /srv
 COPY --from=build /srv .
-ENTRYPOINT ["dotnet", "Steeltoe.NetCoreToolService.dll", "--urls=http://0.0.0.0:80"]
+ENV DOTNET_URLS http://0.0.0.0:80
+ENTRYPOINT ["dotnet", "Steeltoe.NetCoreToolService.dll"]
