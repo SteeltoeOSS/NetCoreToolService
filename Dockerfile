@@ -8,7 +8,7 @@ RUN dotnet publish -c release -o /srv --no-restore
 FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine
 
 WORKDIR /usr/local/src
-RUN git clone https://github.com/SteeltoeOSS/NetCoreToolTemplates
+RUN git clone --branch main https://github.com/SteeltoeOSS/NetCoreToolTemplates
 RUN dotnet build NetCoreToolTemplates
 RUN dotnet new --install NetCoreToolTemplates/src/Content
 
