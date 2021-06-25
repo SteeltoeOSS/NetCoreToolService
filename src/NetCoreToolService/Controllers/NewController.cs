@@ -165,6 +165,12 @@ namespace Steeltoe.NetCoreToolService.Controllers
                                 output = nvp[1];
                                 continue;
                             }
+
+                            if (nvp[1].Contains(' '))
+                            {
+                                optionList.Add($"--{nvp[0]}=\"{nvp[1]}\"");
+                                continue;
+                            }
                         }
 
                         optionList.Add($"--{option}");
