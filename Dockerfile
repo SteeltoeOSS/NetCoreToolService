@@ -7,10 +7,8 @@ RUN dotnet publish -c release -o /srv --no-restore
 
 FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine
 
-WORKDIR /usr/local/src
-RUN git clone --branch main https://github.com/SteeltoeOSS/NetCoreToolTemplates
-RUN dotnet build NetCoreToolTemplates
-RUN dotnet new --install NetCoreToolTemplates/src/Content
+RUN dotnet nuget add source https://pkgs.dev.azure.com/dotnet/Steeltoe/_packaging/dev/nuget/v3/index.json -n SteeltoeDev
+RUN dotnet new --install Steeltoe.NetCoreTool.Templates
 
 WORKDIR /srv
 COPY --from=build /srv .
