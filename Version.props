@@ -6,7 +6,7 @@
 
   <PropertyGroup>
     <MicrosoftExtensionsVersion>5.0.*</MicrosoftExtensionsVersion>
-    <SwashbuckleVersion>5.6.*</SwashbuckleVersion>
+    <SwashbuckleVersion>6.1.*</SwashbuckleVersion>
   </PropertyGroup>
 
   <PropertyGroup>
