@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Steeltoe.Common.Utils.Diagnostics;
+using Steeltoe.Management.Endpoint;
 
 namespace Steeltoe.NetCoreToolService
 {
@@ -43,6 +44,7 @@ namespace Steeltoe.NetCoreToolService
                 options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
             });
             services.AddTransient<ICommandExecutor, CommandExecutor>();
+            services.AddAllActuators();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Steeltoe.NetCoreToolService", Version = "v0" });
@@ -66,7 +68,11 @@ namespace Steeltoe.NetCoreToolService
             app.UseHttpsRedirection();
             app.UseRouting();
             app.UseAuthorization();
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapAllActuators();
+                endpoints.MapControllers();
+            });
         }
     }
 }
