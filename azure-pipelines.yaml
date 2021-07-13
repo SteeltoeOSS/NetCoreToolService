@@ -1,5 +1,5 @@
 trigger:
-  - staging
+  - production
 
 variables:
   - name: major
@@ -50,7 +50,7 @@ stages:
       not(eq(variables['build.reason'], 'PullRequest'))
     jobs:
       - job: deployToStaging
-        displayName: Deploy to Staging
+        displayName: Deploy to Production
         pool:
           vmImage: ubuntu-latest
         steps:
@@ -64,10 +64,10 @@ stages:
                 $(Build.BuildId)
                 latest
           - task: KubernetesManifest@0
-            displayName: Deploy to Staging Cluster
+            displayName: Deploy to Production Cluster
             inputs:
               action: deploy
-              kubernetesServiceConnection: SteeltoeStagingAKS
+              kubernetesServiceConnection: SteeltoeProductionAKS
               manifests: deploy/kubernetes/manifest.yaml
               containers: steeltoe.azurecr.io/net-core-tool-service:$(Build.BuildId)
               namespace: initializr
