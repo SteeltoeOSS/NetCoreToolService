@@ -4,6 +4,7 @@
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using Steeltoe.Extensions.Logging;
 
 namespace Steeltoe.NetCoreToolService
 {
@@ -27,6 +28,7 @@ namespace Steeltoe.NetCoreToolService
         /// <returns>A host.</returns>
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .ConfigureLogging((_, builder) => builder.AddDynamicConsole())
                 .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
     }
 }
