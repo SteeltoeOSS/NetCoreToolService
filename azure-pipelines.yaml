@@ -19,8 +19,8 @@ stages:
   - stage: test
     displayName: Test
     jobs:
-      - job: test
-        displayName: Test
+      - job: dotnetTest
+        displayName: dotnet test
         pool:
           vmImage: ubuntu-latest
         steps:
@@ -33,3 +33,18 @@ stages:
             displayName: dotnet test
             inputs:
               command: test
+  - stage: Deploy
+    displayName: Deploy
+    dependsOn: dotnetTest
+    condition:
+      not(eq(variables['build.reason'], 'PullRequest'))
+    jobs:
+      - job: pushImage
+        displayName: Push Image to Registry
+        inputs:
+          command: buildAndPush
+          containerRegistry: SteeltoeContainerRegistry
+          repository: net-core-tool-service
+          tags: |
+            $(Build.BuildId)
+            latest
