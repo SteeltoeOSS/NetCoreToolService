@@ -30,7 +30,7 @@ stages:
               packageType: sdk
               version: 5.0.x
           - task: DotNetCoreCLI@2
-            displayName: dotnet test
+            displayName: Unit Test
             inputs:
               command: test
   - stage: Deploy
@@ -45,7 +45,7 @@ stages:
           vmImage: ubuntu-latest
         steps:
           - task: Docker@2
-            displayName: build and push
+            displayName: Build and Push
             inputs:
               command: buildAndPush
               containerRegistry: SteeltoeContainerRegistry
