@@ -16,11 +16,11 @@ variables:
 name: $(major).$(minor).$(patch)-$(Rev:r)
 
 stages:
-  - stage: assemble
-    displayName: Assemble
+  - stage: test
+    displayName: Test
     jobs:
-      - job: build
-        displayName: Build
+      - job: test
+        displayName: Test
         pool:
           vmImage: ubuntu-latest
         steps:
@@ -30,16 +30,6 @@ stages:
               packageType: sdk
               version: 5.0.x
           - task: DotNetCoreCLI@2
-            displayName: dotnet restore
-            inputs:
-              command: restore
-          - task: DotNetCoreCLI@2
-            displayName: dotnet build
-            inputs:
-              command: build
-              arguments: --no-restore /p:TreatWarningsAsErrors=True
-          - task: DotNetCoreCLI@2
             displayName: dotnet test
             inputs:
               command: test
-              arguments: --no-build
