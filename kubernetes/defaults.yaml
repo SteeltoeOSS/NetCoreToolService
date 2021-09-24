@@ -2,3 +2,5 @@
 ---
 name: net-core-tool-service
 port: 80
+image_name: net-core-tool-service
+image_tag: latest
