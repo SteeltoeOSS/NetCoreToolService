@@ -42,12 +42,12 @@ stages:
             displayName: Generate Staging Manifest
             inputs:
               scriptPath: ./yttw.sh
-              args: -f kubernetes/manifest.yaml -f kubernetes/defaults.yaml -f kubernetes/staging.yaml --output-files manifests/staging
+              args: -f kubernetes/manifest.yaml -f kubernetes/defaults.yaml -f kubernetes/staging.yaml -v image_tag=$(Build.BuildId) --output-files manifests/staging
           - task: ShellScript@2
             displayName: Generate Production Manifest
             inputs:
               scriptPath: ./yttw.sh
-              args: -f kubernetes/manifest.yaml -f kubernetes/defaults.yaml -f kubernetes/production.yaml --output-files manifests/production
+              args: -f kubernetes/manifest.yaml -f kubernetes/defaults.yaml -f kubernetes/production.yaml -v image_tag=$(Build.BuildId) --output-files manifests/production
           - task: PublishPipelineArtifact@1
             displayName: Publish Manifests
             inputs:
