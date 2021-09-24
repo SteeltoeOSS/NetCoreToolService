@@ -16,8 +16,8 @@ variables:
 name: $(major).$(minor).$(patch)-$(Rev:r)
 
 stages:
-  - stage: test
-    displayName: Test
+  - stage: build
+    displayName: Build
     jobs:
       - job: test
         displayName: Test
@@ -48,7 +48,7 @@ stages:
               command: ./yttw.sh -f kubernetes/manifest.yaml -f kubernetes/defaults.yaml -f kubernetes/production.yaml > manifest-production.yaml
   - stage: Deploy
     displayName: Deploy
-    dependsOn: test
+    dependsOn: build
     condition:
       not(eq(variables['build.reason'], 'PullRequest'))
     jobs:
