@@ -33,6 +33,19 @@ stages:
             displayName: Unit Test
             inputs:
               command: test
+      - job: kubernetes
+        displayName: Kubernetes
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: ShellScript@2
+            displayName: Generate Staging Manifest
+            inputs:
+              command: ./yttw.sh -f kubernetes/manifest.yaml -f kubernetes/defaults.yaml -f kubernetes/staging.yaml > manifest-staging.yaml
+          - task: ShellScript@2
+            displayName: Generate Production Manifest
+            inputs:
+              command: ./yttw.sh -f kubernetes/manifest.yaml -f kubernetes/defaults.yaml -f kubernetes/production.yaml > manifest-production.yaml
   - stage: Deploy
     displayName: Deploy
     dependsOn: test
