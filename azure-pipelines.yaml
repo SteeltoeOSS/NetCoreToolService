@@ -1,5 +1,5 @@
 trigger:
-  - test-gen
+  - main
 
 variables:
   - name: major
