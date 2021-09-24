@@ -48,6 +48,11 @@ stages:
             inputs:
               scriptPath: ./yttw.sh
               args: -f kubernetes/manifest.yaml -f kubernetes/defaults.yaml -f kubernetes/production.yaml --output-files manifests/production
+          - task: PublishPipelineArtifact@1
+            displayName: Publish Manifests
+            inputs:
+              targetPath: manifests
+              artifactName: manifests
   - stage: Deploy
     displayName: Deploy
     dependsOn: build
