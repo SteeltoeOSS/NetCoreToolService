@@ -1,0 +1,4 @@
+#@data/values-schema
+---
+name: net-core-tool-service
+port: 80
