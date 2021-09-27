@@ -16,8 +16,8 @@ variables:
 name: $(major).$(minor).$(patch)-$(Rev:r)
 
 stages:
-  - stage: build
-    displayName: Build
+  - stage: assemble
+    displayName: Assemble
     jobs:
       - job: test
         displayName: Test
@@ -64,7 +64,7 @@ stages:
               artifactName: manifests
   - stage: Deploy
     displayName: Deploy
-    dependsOn: build
+    dependsOn: assemble
     condition:
       not(eq(variables['build.reason'], 'PullRequest'))
     jobs:
