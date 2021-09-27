@@ -1,6 +1,9 @@
 #@data/values-schema
+#@schema/type any=True
 ---
 name: net-core-tool-service
-port: 80
 image_name: steeltoe.azurecr.io/net-core-tool-service
 image_tag: latest
+container_port: 80
+service_port: 80
+replica_count: 1
