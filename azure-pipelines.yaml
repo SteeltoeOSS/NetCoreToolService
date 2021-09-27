@@ -54,7 +54,7 @@ stages:
                 -f kubernetes
                 -v image_tag=$(Build.BuildId)
                 -v replica_count=2
-                --output-files manifests/staging
+                --output-files manifests/production
           - task: PublishPipelineArtifact@1
             displayName: Publish Manifests
             inputs:
