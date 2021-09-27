@@ -21,6 +21,8 @@ spec:
         image: #@ "{}:{}".format(data.values.image_name, data.values.image_tag)
         ports:
         - containerPort: #@ int(data.values.container_port)
+        #@ if/end data.values.args:
+        args: #@ data.values.args.split()
         env:
         - name: DOTNET_ENVIRONMENT
           value: #@ data.values.dotnet_environment
