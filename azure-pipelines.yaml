@@ -19,20 +19,30 @@ stages:
   - stage: assemble
     displayName: Assemble
     jobs:
-      - job: test
-        displayName: Test
+      - job: build
+        displayName: Build
         pool:
           vmImage: ubuntu-latest
         steps:
+          - task: CmdLine@2
+            displayName: 'Set Version'
+            inputs:
+              script: ./setversion.sh $(Build.BuildNumber)
           - task: UseDotNet@2
             displayName: 'Use .NET Core SDK 5.0'
             inputs:
               packageType: sdk
               version: 5.0.x
           - task: DotNetCoreCLI@2
-            displayName: Unit Test
+            displayName: dotnet build
+            inputs:
+              command: build
+              arguments: --no-restore /p:TreatWarningsAsErrors=True
+          - task: DotNetCoreCLI@2
+            displayName: dotnet test
             inputs:
               command: test
+              arguments: --no-build
       - job: kubernetes
         displayName: Kubernetes
         pool:

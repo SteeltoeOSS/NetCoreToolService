@@ -1,7 +1,7 @@
 <Project>
 
   <PropertyGroup>
-    <SteeltoeNetCoreToolServiceVersion>0.1.0</SteeltoeNetCoreToolServiceVersion>
+    <SteeltoeNetCoreToolServiceVersion>0.0.0</SteeltoeNetCoreToolServiceVersion>
   </PropertyGroup>
 
   <PropertyGroup>

@@ -5,6 +5,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Steeltoe.Extensions.Logging;
+using Steeltoe.NetCoreToolService.Models;
+using System.Reflection;
 
 namespace Steeltoe.NetCoreToolService
 {
@@ -13,6 +15,34 @@ namespace Steeltoe.NetCoreToolService
     /// </summary>
     public class Program
     {
+        static Program()
+        {
+            var versionAttr =
+                typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            var fields = versionAttr?.InformationalVersion.Split('+');
+            if (fields is null)
+            {
+                fields = new[] { "unknown" };
+            }
+
+            if (fields.Length == 1)
+            {
+                fields = new[] { fields[0], "unknown" };
+            }
+
+            About = new About
+            {
+                Name = typeof(Program).Namespace ?? "unknown",
+                Version = fields[0],
+                Commit = fields[1],
+            };
+        }
+
+        /// <summary>
+        /// Gets or sets "About" details, such as version.
+        /// </summary>
+        public static About About { get; set; }
+
         /// <summary>
         /// Program entrypoint.
         /// </summary>

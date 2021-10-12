@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Steeltoe.Common.Utils.Diagnostics;
 using Steeltoe.Management.Endpoint;
@@ -56,8 +57,12 @@ namespace Steeltoe.NetCoreToolService
         /// </summary>
         /// <param name="app">Injected IApplicationBuilder.</param>
         /// <param name="env">Injected IWebHostEnvironment.</param>
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        /// <param name="logger">Injected ILogger.</param>
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
+            var about = Program.About;
+            logger.LogInformation("{Program}, version {Version} [{Commit}]", about.Name, about.Version, about.Commit);
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
