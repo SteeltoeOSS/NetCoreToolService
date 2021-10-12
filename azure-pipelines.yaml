@@ -24,10 +24,6 @@ stages:
         pool:
           vmImage: ubuntu-latest
         steps:
-          - task: CmdLine@2
-            displayName: 'Set Version'
-            inputs:
-              script: ./setversion.sh $(Build.BuildNumber)
           - task: UseDotNet@2
             displayName: 'Use .NET Core SDK 5.0'
             inputs:
@@ -87,6 +83,10 @@ stages:
         pool:
           vmImage: ubuntu-latest
         steps:
+          - task: CmdLine@2
+            displayName: 'Set Version'
+            inputs:
+              script: ./setversion.sh $(Build.BuildNumber)
           - task: Docker@2
             displayName: Build and Push
             inputs:
