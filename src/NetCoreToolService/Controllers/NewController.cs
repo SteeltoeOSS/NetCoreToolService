@@ -149,7 +149,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            _logger.LogInformation("New: template={Template}, options={Options}, packaging={Packaging}", template, options, packaging);
+            _logger?.LogInformation("New: template={Template}, options={Options}, packaging={Packaging}", template, options, packaging);
 
             try
             {
