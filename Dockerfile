@@ -10,6 +10,9 @@ ARG templates_version=1.0.1
 RUN dotnet nuget add source https://pkgs.dev.azure.com/dotnet/Steeltoe/_packaging/dev/nuget/v3/index.json -n SteeltoeDev
 RUN dotnet new --install Steeltoe.NetCoreTool.Templates::${templates_version} &&\
       dotnet new --list | grep steeltoe-webapi
+# WORKDIR /usr/local/src
+# RUN git clone https://github.com/SteeltoeOSS/NetCoreToolTemplates
+# RUN dotnet new --install NetCoreToolTemplates/src/Content
 WORKDIR /srv
 COPY --from=build /srv .
 ENV DOTNET_URLS http://0.0.0.0:80
