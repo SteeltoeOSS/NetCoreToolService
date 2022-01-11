@@ -6,7 +6,7 @@ RUN dotnet restore
 RUN dotnet publish -c release -o /srv --no-restore
 
 FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine
-ARG templates_version=1.2.1-prerelease
+ARG templates_version=1.2.1
 RUN dotnet nuget add source https://pkgs.dev.azure.com/dotnet/Steeltoe/_packaging/dev/nuget/v3/index.json -n SteeltoeDev
 RUN dotnet new --install Steeltoe.NetCoreTool.Templates::${templates_version} &&\
       dotnet new --list | grep steeltoe-webapi
