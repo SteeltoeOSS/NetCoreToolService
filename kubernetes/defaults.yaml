@@ -2,6 +2,7 @@
 #@schema/type any=True
 ---
 name: net-core-tool-service
+namespace: initializr
 image_name: steeltoe.azurecr.io/net-core-tool-service
 image_tag: latest
 container_port: 80
