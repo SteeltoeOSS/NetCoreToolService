@@ -25,7 +25,7 @@ namespace Steeltoe.Common.Utils.Test.Diagnostics
         {
             var result = await _commandExecutor.ExecuteAsync("dotnet --no-such-option");
             Assert.NotEqual(0, result.ExitCode);
-            Assert.Contains("Unknown option: --no-such-option", result.Error);
+            Assert.Contains("--no-such-option does not exist", result.Error);
         }
 
         [Fact]

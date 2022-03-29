@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Steeltoe.Common.Utils.Diagnostics;
 using Steeltoe.Management.Endpoint;
+using System.Text.Json.Serialization;
 
 namespace Steeltoe.NetCoreToolService
 {
@@ -41,7 +42,7 @@ namespace Steeltoe.NetCoreToolService
         {
             services.AddControllers().AddJsonOptions(options =>
             {
-                options.JsonSerializerOptions.IgnoreNullValues = true;
+                options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                 options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
             });
             services.AddTransient<ICommandExecutor, CommandExecutor>();
