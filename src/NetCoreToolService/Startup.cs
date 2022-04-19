@@ -47,6 +47,7 @@ namespace Steeltoe.NetCoreToolService
             });
             services.AddTransient<ICommandExecutor, CommandExecutor>();
             services.AddAllActuators();
+            services.ActivateActuatorEndpoints();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Steeltoe.NetCoreToolService", Version = "v0" });
@@ -76,7 +77,6 @@ namespace Steeltoe.NetCoreToolService
             app.UseAuthorization();
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapAllActuators();
                 endpoints.MapControllers();
             });
         }

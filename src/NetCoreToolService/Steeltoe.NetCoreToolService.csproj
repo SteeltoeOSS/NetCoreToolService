@@ -2,11 +2,8 @@
 
   <ItemGroup>
     <PackageReference Include="Steeltoe.Management.EndpointCore" Version="$(SteeltoeVersion)" />
+    <PackageReference Include="Steeltoe.Common.Utils" Version="$(SteeltoeVersion)" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="$(SwashbuckleVersion)" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Common.Utils\Steeltoe.Common.Utils.csproj" />
   </ItemGroup>
 
 </Project>
