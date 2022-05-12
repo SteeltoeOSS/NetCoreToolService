@@ -46,15 +46,15 @@ stages:
     pool:
       vmImage: ubuntu-latest
     steps:
-      - task: Docker@2
-        displayName: Build and Push Docker Image
-        inputs:
-          command: buildAndPush
-          containerRegistry: SteeltoeContainerRegistry
-          repository: net-core-tool-service
-          tags: |
-            $(Build.BuildId)
-            latest
+    - task: Docker@2
+      displayName: Build and Push Docker Image
+      inputs:
+        command: buildAndPush
+        containerRegistry: SteeltoeContainerRegistry
+        repository: net-core-tool-service
+        tags: |
+          $(Build.BuildId)
+          latest
     - task: ShellScript@2
       displayName: Generate Staging Manifest
       inputs:
