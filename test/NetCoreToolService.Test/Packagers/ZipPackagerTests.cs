@@ -50,11 +50,11 @@ namespace Steeltoe.NetCoreToolService.Test.Packagers
             using var entries = zip.Entries.GetEnumerator();
             entries.MoveNext().Should().BeTrue();
             Assert.NotNull(entries.Current);
-            entries.Current.FullName.Should().Be("d1/");
+            entries.Current.FullName.Should().Be($"d1{Path.DirectorySeparatorChar}");
             entries.MoveNext().Should().BeTrue();
             Assert.NotNull(entries.Current);
             entries.Current.Name.Should().Be("f1");
-            entries.Current.FullName.Should().Be("d1/f1");
+            entries.Current.FullName.Should().Be($"d1{Path.DirectorySeparatorChar}f1");
             using var reader = new StreamReader(entries.Current.Open());
             reader.ReadToEnd().Should().Be("f1 stuff");
             entries.MoveNext().Should().BeFalse();
@@ -79,12 +79,12 @@ namespace Steeltoe.NetCoreToolService.Test.Packagers
             using var entries = zip.Entries.GetEnumerator();
             entries.MoveNext().Should().BeTrue();
             Assert.NotNull(entries.Current);
-            entries.Current.FullName.Should().Be("d1/");
+            entries.Current.FullName.Should().Be($"d1{Path.DirectorySeparatorChar}");
             using var reader = new StreamReader(entries.Current.Open());
             reader.ReadToEnd().Should().BeEmpty();
             entries.MoveNext().Should().BeTrue();
             Assert.NotNull(entries.Current);
-            entries.Current.FullName.Should().Be("d1/d2/");
+            entries.Current.FullName.Should().Be($"d1{Path.DirectorySeparatorChar}d2{Path.DirectorySeparatorChar}");
             entries.MoveNext().Should().BeFalse();
         }
 

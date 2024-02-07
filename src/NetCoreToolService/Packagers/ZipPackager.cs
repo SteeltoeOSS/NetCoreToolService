@@ -84,7 +84,7 @@ namespace Steeltoe.NetCoreToolService.Packagers
             var directory = new DirectoryInfo(path);
             if (path != rootPath)
             {
-                var entry = archive.CreateEntry($"{Path.GetRelativePath(rootPath, path)}/");
+                var entry = archive.CreateEntry($"{Path.GetRelativePath(rootPath, path)}{Path.DirectorySeparatorChar}");
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     entry.ExternalAttributes = UnixDirectoryPermissions;
