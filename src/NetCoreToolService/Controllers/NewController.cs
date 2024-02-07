@@ -208,7 +208,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
                     var start = newCommand.Error.IndexOf(invalidOptionError, StringComparison.Ordinal) +
                                 invalidOptionError.Length;
                     start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf('\n', start);
+                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
                     return NotFound($"Switch '{newCommand.Error[start..end]}' not found.");
                 }
 
@@ -218,7 +218,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
                     var start = newCommand.Error.IndexOf(invalidSwitchError, StringComparison.Ordinal) +
                                 invalidSwitchError.Length;
                     start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf('\n', start);
+                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
                     return NotFound($"Switch '{newCommand.Error[start..end]}' not found.");
                 }
 
@@ -228,7 +228,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
                     var start = newCommand.Error.IndexOf(invalidParameterError, StringComparison.Ordinal) +
                                 invalidParameterError.Length;
                     start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf('\n', start);
+                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
                     var nvp = newCommand.Error[start..end].Split(' ', 2);
                     return NotFound($"Option '{nvp[0]}' parameter '{nvp[1]}' not found.");
                 }
