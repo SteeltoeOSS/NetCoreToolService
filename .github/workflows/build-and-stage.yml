@@ -10,6 +10,16 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_VERSION: '8.0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  checks: write
+  contents: read
+  statuses: write
+
 jobs:
   build:
     name: Build and publish app
@@ -51,7 +61,7 @@ jobs:
       run: dotnet publish src/NetCoreToolService/Steeltoe.NetCoreToolService.csproj -o publish
 
     - name: Upload artifact for deployment job
-      if: github.event_name != 'PullRequest'
+      if: ${{ github.event_name != 'pull_request' }}
       uses: actions/upload-artifact@v4
       with:
         name: published-app
@@ -59,10 +69,11 @@ jobs:
 
   deploy:
     name: Deploy
+    environment: production
     needs:
     - build
     runs-on: ubuntu-latest
-    if: github.event_name != 'PullRequest'
+    if: ${{ github.event_name != 'pull_request' }}
     steps:
     - name: Download artifact from build job
       uses: actions/download-artifact@v4
