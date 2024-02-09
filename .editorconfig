@@ -21,3 +21,6 @@ indent_size = 4
 
 [*.json]
 indent_size = 2
+
+[Dockerfile,*.sh]
+end_of_line = lf

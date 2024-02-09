@@ -6,89 +6,71 @@ on:
   pull_request:
     branches:
     - main
-env:
-  DOTNET_CLI_TELEMETRY_OPTOUT: 1
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
-  DOTNET_VERSION: '8.0'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  checks: write
   contents: read
-  statuses: write
+  pull-requests: 'write'
+
+env:
+  IMAGE_NAME: net-core-tool-service
+  IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.run_id }}
 
 jobs:
-  build:
-    name: Build and publish app
+  build-push-deploy:
+    name: Build and push image
+    environment:
+      name: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || vars.STAGING_SLOT_NAME }}
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    env:
+      SLOT_NAME: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || vars.STAGING_SLOT_NAME }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
 
-    - name: Set up .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Set up dependency caching for faster builds
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-nuget-
-
-    - name: dotnet restore
-      run: dotnet restore
-
-    - name: dotnet build
-      run: dotnet build --no-restore /p:TreatWarningsAsErrors=True
-
-    - name: dotnet test
-      run: dotnet test --logger trx --results-directory "${{ runner.temp }}" --no-build
-
-    - name: dotnet test
-      uses: NasAmin/trx-parser@v0.5.0
-      with:
-        TRX_PATH: "${{ runner.temp }}"
-        REPO_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-    - name: dotnet publish
-      run: dotnet publish src/NetCoreToolService/Steeltoe.NetCoreToolService.csproj -o publish
-
-    - name: Upload artifact for deployment job
-      if: ${{ github.event_name != 'pull_request' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: published-app
-        path: publish
-
-  deploy:
-    name: Deploy
-    environment: production
-    needs:
-    - build
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' }}
-    steps:
-    - name: Download artifact from build job
-      uses: actions/download-artifact@v4
-      with:
-        name: published-app
-
-    - name: Log into Azure CLI with service principal
+    - name: Login to Azure
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Deploy to Azure Web App
-      id: deploy-to-webapp
-      uses: azure/webapps-deploy@v3
+    - name: Login to container registry
+      uses: azure/docker-login@v1
       with:
+        login-server: "${{ vars.DOCKER_REGISTRY }}"
+        username: "${{ secrets.DOCKER_USERNAME }}"
+        password: "${{ secrets.DOCKER_PASSWORD }}"
+
+    - name: Build image
+      run: docker build . --file "Dockerfile" -t ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+    - name: Push image
+      run: docker push ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+    - name: If PR, create a new staging slot
+      if: ${{ github.event_name == 'pull_request' }}
+      run: az webapp deployment slot create --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --name ${{ vars.AZURE_WEBAPP_NAME}} --slot ${{ env.SLOT_NAME }} --configuration-source ${{ vars.STAGING_SLOT_NAME }}
+
+    - name: Deploy to staging slot
+      uses: azure/webapps-deploy@v3
+      id: deploy-to-webapp
+      with: 
         app-name: ${{ vars.AZURE_WEBAPP_NAME }}
-        package: '.'
-        slot-name: 'production'
+        images: ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        slot-name:  ${{ env.SLOT_NAME }}
+    
+    - name: If PR, comment with the preview link
+      if: ${{ github.event_name == 'pull_request' }}
+      uses: mshick/add-pr-comment@v2
+      with:
+        message: |
+          ## Preview link: https://${{ vars.AZURE_WEBAPP_NAME }}-${{ env.SLOT_NAME }}.azurewebsites.net 
+          
+          - Your changes have been deployed to the preview site. The preview site will update as you add more commits to this branch.
+          - The preview link is shareable, but will be deleted when the pull request is merged or closed.
+
+          > *This is an automated message.*
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+  
