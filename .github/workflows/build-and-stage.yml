@@ -34,9 +34,11 @@ jobs:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
 
     - name: Detect template source from PR body
+      env:
+        PullRequestBody: ${{ github.event.pull_request.body }}
       run: |
         cat << EOF > /tmp/pull_request_body.txt
-        ${{ github.event.pull_request.body }}
+        $PullRequestBody
         EOF
 
         CheckoutTarget=$(grep "template_checkout_target=" /tmp/pull_request_body.txt | awk -F= '{print $2}')
@@ -72,18 +74,18 @@ jobs:
     - name: Deploy to staging slot
       uses: azure/webapps-deploy@v3
       id: deploy-to-webapp
-      with: 
+      with:
         app-name: ${{ vars.AZURE_WEBAPP_NAME }}
         images: ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
         slot-name:  ${{ env.SLOT_NAME }}
-    
+
     - name: If PR, comment with the preview link
       if: ${{ github.event_name == 'pull_request' }}
       uses: mshick/add-pr-comment@v2
       with:
         message: |
-          ## Preview link: https://${{ vars.AZURE_WEBAPP_NAME }}-${{ env.SLOT_NAME }}.azurewebsites.net 
-          
+          ## Preview link: https://${{ vars.AZURE_WEBAPP_NAME }}-${{ env.SLOT_NAME }}.azurewebsites.net
+
           - Your changes have been deployed to the preview site. The preview site will update as you add more commits to this branch.
           - The preview link is shareable, but will be deleted when the pull request is merged or closed.
 
