@@ -13,7 +13,7 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: 'write'
+  pull-requests: write
 
 env:
   IMAGE_NAME: net-core-tool-service
@@ -33,6 +33,20 @@ jobs:
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
 
+    - name: Detect template source from PR body
+      run: |
+        cat << EOF > /tmp/pull_request_body.txt
+        ${{ github.event.pull_request.body }}
+        EOF
+
+        CheckoutTarget=$(grep "template_checkout_target=" /tmp/pull_request_body.txt | awk -F= '{print $2}')
+        if [ "$CheckoutTarget" = "" ]; then
+            echo "Did not find a checkout target for templates."
+        else
+            echo "Found checkout target '$CheckoutTarget' in PR body, this build will use templates from source."
+            echo "TEMPLATE_CHECKOUT_TARGET=$CheckoutTarget" >> $GITHUB_ENV
+        fi
+
     - name: Login to Azure
       uses: azure/login@v1
       with:
@@ -46,7 +60,7 @@ jobs:
         password: "${{ secrets.DOCKER_PASSWORD }}"
 
     - name: Build image
-      run: docker build . --file "Dockerfile" -t ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+      run: docker build . -t ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --build-arg TEMPLATE_CHECKOUT_TARGET=${{ env.TEMPLATE_CHECKOUT_TARGET }}
 
     - name: Push image
       run: docker push ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
@@ -75,4 +89,3 @@ jobs:
 
           > *This is an automated message.*
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-  
