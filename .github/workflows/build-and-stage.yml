@@ -1,4 +1,5 @@
 name: Build and stage
+
 on:
   push:
     branches:
@@ -13,30 +14,36 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: 'write'
+  pull-requests: write
 
 env:
   IMAGE_NAME: net-core-tool-service
   IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.run_id }}
 
 jobs:
-  build-push-deploy:
+  build-push:
     name: Build and push image
-    environment:
-      name: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || vars.STAGING_SLOT_NAME }}
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    env:
-      SLOT_NAME: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || vars.STAGING_SLOT_NAME }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
 
-    - name: Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Detect template source from PR body
+      env:
+        PullRequestBody: ${{ github.event.pull_request.body }}
+      run: |
+        cat << EOF > /tmp/pull_request_body.txt
+        $PullRequestBody
+        EOF
+
+        CheckoutTarget=$(grep "template_checkout_target=" /tmp/pull_request_body.txt | awk -F= '{print $2}')
+        if [ "$CheckoutTarget" = "" ]; then
+            echo "Did not find a checkout target for templates."
+        else
+            echo "Found checkout target '$CheckoutTarget' in PR body, this build will use templates from source."
+            echo "TEMPLATE_CHECKOUT_TARGET=$CheckoutTarget" >> $GITHUB_ENV
+        fi
 
     - name: Login to container registry
       uses: azure/docker-login@v1
@@ -46,33 +53,48 @@ jobs:
         password: "${{ secrets.DOCKER_PASSWORD }}"
 
     - name: Build image
-      run: docker build . --file "Dockerfile" -t ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+      run: docker build . -t ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --build-arg TEMPLATE_CHECKOUT_TARGET=${{ env.TEMPLATE_CHECKOUT_TARGET }}
 
     - name: Push image
       run: docker push ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+  deploy:
+    name: Deploy
+    if: ${{ github.secret_source == 'Actions' }}
+    environment:
+      name: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || vars.STAGING_SLOT_NAME }}
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    env:
+      SLOT_NAME: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || vars.STAGING_SLOT_NAME }}
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+    - name: Login to Azure
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: If PR, create a new staging slot
       if: ${{ github.event_name == 'pull_request' }}
       run: az webapp deployment slot create --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --name ${{ vars.AZURE_WEBAPP_NAME}} --slot ${{ env.SLOT_NAME }} --configuration-source ${{ vars.STAGING_SLOT_NAME }}
 
     - name: Deploy to staging slot
-      uses: azure/webapps-deploy@v3
       id: deploy-to-webapp
-      with: 
+      uses: azure/webapps-deploy@v3
+      with:
         app-name: ${{ vars.AZURE_WEBAPP_NAME }}
         images: ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
         slot-name:  ${{ env.SLOT_NAME }}
-    
+
     - name: If PR, comment with the preview link
       if: ${{ github.event_name == 'pull_request' }}
       uses: mshick/add-pr-comment@v2
       with:
         message: |
-          ## Preview link: https://${{ vars.AZURE_WEBAPP_NAME }}-${{ env.SLOT_NAME }}.azurewebsites.net 
-          
+          ## Preview link: https://${{ vars.AZURE_WEBAPP_NAME }}-${{ env.SLOT_NAME }}.azurewebsites.net
+
           - Your changes have been deployed to the preview site. The preview site will update as you add more commits to this branch.
           - The preview link is shareable, but will be deleted when the pull request is merged or closed.
 
           > *This is an automated message.*
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-  

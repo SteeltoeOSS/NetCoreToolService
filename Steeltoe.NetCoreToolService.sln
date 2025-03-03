@@ -19,8 +19,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Directory.Build.props = Directory.Build.props
 		docker-compose.yaml = docker-compose.yaml
 		Dockerfile = Dockerfile
+		install-template.sh = install-template.sh
 		stylecop.json = stylecop.json
 		Version.props = Version.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{4D3C2BC0-3714-42D2-BB89-057E57D92BAF}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\build-and-stage.yml = .github\workflows\build-and-stage.yml
+		.github\workflows\pr-cleanup.yml = .github\workflows\pr-cleanup.yml
+		.github\workflows\stage-prod-swap.yml = .github\workflows\stage-prod-swap.yml
 	EndProjectSection
 EndProject
 Global
@@ -64,6 +74,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{1462EDFE-F1FC-48C2-80C1-917317EE3C97} = {C742A7B8-80CA-4365-85CA-C29AA744CE54}
 		{6BD6C793-E555-475F-A2E1-12D7F3F56A3B} = {410C0E72-737F-4168-AECA-2F6D19EE86D5}
+		{4D3C2BC0-3714-42D2-BB89-057E57D92BAF} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D8EFB01A-92BF-418B-B2B2-A12045B772E2}
