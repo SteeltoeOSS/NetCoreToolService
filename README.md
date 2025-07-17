@@ -4,6 +4,8 @@
 
 ## Generate Kubernetes Manifest
 
+
+
 ```
 # default manifest
 $ ytt -f kubernetes
