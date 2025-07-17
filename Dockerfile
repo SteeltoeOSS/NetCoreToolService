@@ -7,7 +7,7 @@ RUN dotnet build src/NetCoreToolService --configuration Release --no-restore
 RUN dotnet publish src/NetCoreToolService --output /srv --no-build
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine
-ARG templates_version=1.4.0
+ARG templates_version=1.4.1
 ARG TEMPLATE_CHECKOUT_TARGET
 WORKDIR /srv
 COPY --from=build /srv .
