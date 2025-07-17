@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-# dotnet nuget add source https://pkgs.dev.azure.com/dotnet/Steeltoe/_packaging/dev/nuget/v3/index.json -n SteeltoeDev
+# dotnet nuget add source https://pkgs.dev.azure.com/dotnet/Steeltoe/_packaging/ci/nuget/v3/index.json -n SteeltoeDev
 
 if [[ -z "$TEMPLATE_CHECKOUT_TARGET" ]] ;then
     dotnet new install Steeltoe.NetCoreTool.Templates::${templates_version} &&\
