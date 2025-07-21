@@ -67,9 +67,9 @@ namespace Steeltoe.NetCoreToolService.Controllers
         [HttpPut("nuget/{nuGetId}")]
         public async Task<ActionResult> InstallTemplates(string nuGetId)
         {
-            await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new --uninstall {nuGetId}");
+            await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}");
             var oldTemplates = await GetTemplateDictionary();
-            var installCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new --install {nuGetId}");
+            var installCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new install {nuGetId}");
             const string notFoundError = "error NU1101: ";
             if (installCommand.Output.Contains(notFoundError))
             {
@@ -98,7 +98,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
         {
             var oldTemplates = await GetTemplateDictionary();
             var uninstallCommand =
-                await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new --uninstall {nuGetId}");
+                await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}");
             if (uninstallCommand.Output.Contains($"Could not find something to uninstall"))
             {
                 return NotFound($"No templates with NuGet ID '{nuGetId}' installed.");
@@ -255,7 +255,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
 
         private async Task<TemplateDictionary> GetTemplateDictionary()
         {
-            var listCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new --list");
+            var listCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new list");
 
             var lines = listCommand.Output.Split('\n').ToList()
                 .FindAll(line => !string.IsNullOrWhiteSpace(line));
