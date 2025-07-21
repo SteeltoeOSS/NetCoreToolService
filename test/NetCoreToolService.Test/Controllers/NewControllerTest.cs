@@ -24,7 +24,7 @@ namespace Steeltoe.NetCoreToolService.Test.Controllers
         {
             // Arrange
             var executor = new Mock<ICommandExecutor>();
-            executor.Setup(expression: c => c.ExecuteAsync($"{NetCoreTool.Command} new --list", null, -1))
+            executor.Setup(expression: c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1))
                 .ReturnsAsync(new CommandResult
                     {
                         ExitCode = 0,
@@ -59,7 +59,7 @@ My Other Template    myot      otherlang  othertags
         {
             // Arrange
             var executor = new Mock<ICommandExecutor>();
-            executor.SetupSequence(c => c.ExecuteAsync($"{NetCoreTool.Command} new --list", null, -1))
+            executor.SetupSequence(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1))
                 .ReturnsAsync(new CommandResult
                     {
                         ExitCode = 0,
@@ -82,7 +82,7 @@ Other New Template   ont       bigtalk    otherstuff
 ",
                     }
                 );
-            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new --install My.Templates", null, -1))
+            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new install My.Templates", null, -1))
                 .ReturnsAsync(new CommandResult
                     {
                         ExitCode = 0,
@@ -111,7 +111,7 @@ Other New Template   ont       bigtalk    otherstuff
         {
             // Arrange
             var executor = new Mock<ICommandExecutor>();
-            executor.SetupSequence(c => c.ExecuteAsync($"{NetCoreTool.Command} new --list", null, -1))
+            executor.SetupSequence(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1))
                 .ReturnsAsync(new CommandResult
                     {
                         ExitCode = 0,
@@ -134,7 +134,7 @@ My Other Template    myot      otherlang  othertags
 ",
                     }
                 );
-            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new --uninstall My.Templates", null, -1))
+            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new uninstall My.Templates", null, -1))
                 .ReturnsAsync(new CommandResult
                     {
                         ExitCode = 0,
@@ -296,7 +296,7 @@ The template ""mytemplate"" was created successfully.
         {
             // Arrange
             var executor = new Mock<ICommandExecutor>();
-            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new --list", null, -1))
+            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1))
                 .ReturnsAsync(new CommandResult
                     {
                         ExitCode = 0,
@@ -308,7 +308,7 @@ My Other Template    myot      otherlang  othertags
                     }
                 );
             executor.Setup(c =>
-                    c.ExecuteAsync($"{NetCoreTool.Command} new --install No.Such.Template", null, -1))
+                    c.ExecuteAsync($"{NetCoreTool.Command} new install No.Such.Template", null, -1))
                 .ReturnsAsync(new CommandResult
                 {
                     ExitCode = 2,
@@ -335,7 +335,7 @@ Failed to restore ...
         {
             // Arrange
             var executor = new Mock<ICommandExecutor>();
-            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new --list", null, -1))
+            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1))
                 .ReturnsAsync(new CommandResult
                     {
                         ExitCode = 0,
@@ -344,7 +344,7 @@ Failed to restore ...
 ",
                     }
                 );
-            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new --uninstall My.Templates", null, -1))
+            executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new uninstall My.Templates", null, -1))
                 .ReturnsAsync(new CommandResult
                     {
                         ExitCode = 0,
