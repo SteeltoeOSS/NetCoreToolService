@@ -33,7 +33,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
 
         private readonly ILogger<NewController> _logger;
 
-        private readonly Dictionary<string, IPackager> _packagers = new ()
+        private readonly Dictionary<string, IPackager> _packagers = new()
         {
             { "zip", new ZipPackager() },
         };
@@ -260,7 +260,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
             var lines = listCommand.Output.Split('\n').ToList()
                 .FindAll(line => !string.IsNullOrWhiteSpace(line));
 
-            var headingIdx = lines.FindIndex(line => line.StartsWith("-"));
+            var headingIdx = lines.FindIndex(line => line.StartsWith('-'));
             var headings = lines[headingIdx].Split("  ");
             const int nameColStart = 0;
             var nameColEnd = nameColStart + headings[0].Length;
