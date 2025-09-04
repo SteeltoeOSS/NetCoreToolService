@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <SteeltoeVersion>4.0.0-rc1</SteeltoeVersion>
-    <SteeltoeUtilsVersion>3.2.8</SteeltoeUtilsVersion>
+    <SteeltoeVersion>4.0.0</SteeltoeVersion>
+    <SteeltoeUtilsVersion>3.3.0</SteeltoeUtilsVersion>
     <SwashbuckleVersion>6.5.0</SwashbuckleVersion>
   </PropertyGroup>
 
