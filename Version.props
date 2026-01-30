@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <SteeltoeVersion>4.0.0</SteeltoeVersion>
+    <SteeltoeVersion>4.1.0</SteeltoeVersion>
     <SteeltoeUtilsVersion>3.3.0</SteeltoeUtilsVersion>
     <SwashbuckleVersion>6.5.0</SwashbuckleVersion>
   </PropertyGroup>
