@@ -23,7 +23,7 @@ jobs:
     name: Build and push image
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
 
@@ -44,7 +44,7 @@ jobs:
         fi
 
     - name: Login to container registry
-      uses: azure/docker-login@v1
+      uses: azure/docker-login@v2
       with:
         login-server: "${{ vars.DOCKER_REGISTRY }}"
         username: "${{ secrets.DOCKER_USERNAME }}"
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Login to Azure
-      uses: azure/login@v2
+      uses: azure/login@v3
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
@@ -86,7 +86,7 @@ jobs:
 
     - name: If PR, comment with the preview link
       if: ${{ github.event_name == 'pull_request' }}
-      uses: mshick/add-pr-comment@v2
+      uses: mshick/add-pr-comment@v3
       with:
         message: |
           ## Preview link: https://${{ vars.AZURE_WEBAPP_NAME }}-${{ env.SLOT_NAME }}.azurewebsites.net
