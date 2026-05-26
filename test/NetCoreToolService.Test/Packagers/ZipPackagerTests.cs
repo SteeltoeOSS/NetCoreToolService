@@ -5,8 +5,8 @@
 using System.IO;
 using System.IO.Compression;
 using FluentAssertions;
-using Steeltoe.Common.Utils.IO;
 using Steeltoe.NetCoreToolService.Packagers;
+using Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
 using Xunit;
 
 namespace Steeltoe.NetCoreToolService.Test.Packagers

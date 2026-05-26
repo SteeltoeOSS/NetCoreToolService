@@ -5,9 +5,9 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using Steeltoe.Common.Utils.Diagnostics;
 using Steeltoe.NetCoreToolService.Controllers;
 using Steeltoe.NetCoreToolService.Models;
+using Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
 using Xunit;
 
 namespace Steeltoe.NetCoreToolService.Test.Controllers

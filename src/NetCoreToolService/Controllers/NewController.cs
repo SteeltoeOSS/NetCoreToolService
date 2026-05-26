@@ -5,10 +5,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Steeltoe.Common.Utils.Diagnostics;
-using Steeltoe.Common.Utils.IO;
 using Steeltoe.NetCoreToolService.Models;
 using Steeltoe.NetCoreToolService.Packagers;
+using Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
+using Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
