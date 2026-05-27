@@ -2,16 +2,15 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-namespace Steeltoe.NetCoreToolService
+namespace Steeltoe.NetCoreToolService;
+
+/// <summary>
+/// "Things" particular to the Net Core Tool command, aka <c>"dotnet"</c>.
+/// </summary>
+public static class NetCoreTool
 {
     /// <summary>
-    /// "Things" particular to the Net Core Tool command, aka <c>"dotnet"</c>.
+    /// The filename of the Net Core Tool command: <c>"dotnet"</c>.
     /// </summary>
-    public static class NetCoreTool
-    {
-        /// <summary>
-        /// The filename of the Net Core Tool command: <c>"dotnet"</c>.
-        /// </summary>
-        public const string Command = "dotnet";
-    }
+    public const string Command = "dotnet";
 }

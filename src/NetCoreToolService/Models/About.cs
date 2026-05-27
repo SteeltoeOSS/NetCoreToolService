@@ -2,30 +2,29 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-namespace Steeltoe.NetCoreToolService.Models
+namespace Steeltoe.NetCoreToolService.Models;
+
+/// <summary>
+/// Application information, such as version.
+/// </summary>
+public sealed class About
 {
+    /* ----------------------------------------------------------------- *
+     * properties                                                        *
+     * ----------------------------------------------------------------- */
+
     /// <summary>
-    /// Application information, such as version.
+    /// Gets or sets the application name.
     /// </summary>
-    public sealed class About
-    {
-        /* ----------------------------------------------------------------- *
-         * properties                                                        *
-         * ----------------------------------------------------------------- */
+    public string Name { get; set; }
 
-        /// <summary>
-        /// Gets or sets the application name.
-        /// </summary>
-        public string Name { get; set; }
+    /// <summary>
+    /// Gets or sets the application version.
+    /// </summary>
+    public string Version { get; set; }
 
-        /// <summary>
-        /// Gets or sets the application version.
-        /// </summary>
-        public string Version { get; set; }
-
-        /// <summary>
-        /// Gets or sets the application build source control commit ID.
-        /// </summary>
-        public string Commit { get; set; }
-    }
+    /// <summary>
+    /// Gets or sets the application build source control commit ID.
+    /// </summary>
+    public string Commit { get; set; }
 }

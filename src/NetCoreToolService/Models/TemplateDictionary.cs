@@ -4,12 +4,11 @@
 
 using System.Collections.Generic;
 
-namespace Steeltoe.NetCoreToolService.Models
+namespace Steeltoe.NetCoreToolService.Models;
+
+/// <summary>
+/// A convenience dictionary for template information.
+/// </summary>
+public class TemplateDictionary : Dictionary<string, TemplateInfo>
 {
-    /// <summary>
-    /// A convenience dictionary for template information.
-    /// </summary>
-    public class TemplateDictionary : Dictionary<string, TemplateInfo>
-    {
-    }
 }
