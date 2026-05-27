@@ -10,6 +10,7 @@ using Steeltoe.NetCoreToolService.Packagers;
 using Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
 using Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -26,11 +27,18 @@ namespace Steeltoe.NetCoreToolService.Controllers
     public class NewController : ControllerBase
     {
         private const string DefaultOutput = "Sample";
-
         private const string DefaultPackaging = "zip";
 
-        private readonly ICommandExecutor _commandExecutor;
+        private static readonly string[] LineBreaks =
+        [
+            "\r",
+            "\n",
+            "\r\n"
+        ];
 
+        private static readonly SearchValues<string> LineBreakValues = SearchValues.Create(LineBreaks, StringComparison.Ordinal);
+
+        private readonly ICommandExecutor _commandExecutor;
         private readonly ILogger<NewController> _logger;
 
         private readonly Dictionary<string, IPackager> _packagers = new()
@@ -73,10 +81,9 @@ namespace Steeltoe.NetCoreToolService.Controllers
             const string notFoundError = "error NU1101: ";
             if (installCommand.Output.Contains(notFoundError))
             {
-                var start = installCommand.Output.IndexOf(notFoundError, StringComparison.Ordinal) +
-                            notFoundError.Length;
-                var end = installCommand.Output.IndexOf('\n', start);
-                return BadRequest(installCommand.Output[start..end].Trim());
+                ReadOnlySpan<char> outputSpan = installCommand.Output.AsSpan();
+                ReadOnlySpan<char> messageSpan = GetStringOnLine(StripTextBefore(outputSpan, notFoundError)).Trim();
+                return BadRequest(messageSpan.ToString());
             }
 
             var newTemplates = await GetTemplateDictionary();
@@ -124,9 +131,9 @@ namespace Steeltoe.NetCoreToolService.Controllers
             var helpCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new {template} --help");
             if (helpCommand.ExitCode != 0)
             {
-                var start = helpCommand.Error.IndexOf("No templates found", StringComparison.Ordinal);
-                var end = helpCommand.Error.IndexOf('\n', start);
-                return NotFound(helpCommand.Error[start..end].Trim());
+                ReadOnlySpan<char> errorSpan = helpCommand.Error.AsSpan();
+                ReadOnlySpan<char> messageSpan = GetStringOnLine(StripTextBefore(errorSpan, "No templates found", true)).Trim();
+                return NotFound(messageSpan.ToString());
             }
 
             return Ok(helpCommand.Output.Trim());
@@ -205,32 +212,26 @@ namespace Steeltoe.NetCoreToolService.Controllers
                 const string invalidOptionError = "Invalid option(s)";
                 if (newCommand.Error.Contains(invalidOptionError))
                 {
-                    var start = newCommand.Error.IndexOf(invalidOptionError, StringComparison.Ordinal) +
-                                invalidOptionError.Length;
-                    start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
-                    return NotFound($"Switch '{newCommand.Error[start..end]}' not found.");
+                    ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
+                    ReadOnlySpan<char> switchName = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidOptionError), "--"));
+                    return NotFound($"Switch '{switchName}' not found.");
                 }
 
                 const string invalidSwitchError = "Invalid input switch:";
                 if (newCommand.Error.Contains(invalidSwitchError))
                 {
-                    var start = newCommand.Error.IndexOf(invalidSwitchError, StringComparison.Ordinal) +
-                                invalidSwitchError.Length;
-                    start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
-                    return NotFound($"Switch '{newCommand.Error[start..end]}' not found.");
+                    ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
+                    ReadOnlySpan<char> switchName = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidSwitchError), "--"));
+                    return NotFound($"Switch '{switchName}' not found.");
                 }
 
                 const string invalidParameterError = "Error: Invalid parameter(s):";
                 if (newCommand.Error.Contains(invalidParameterError))
                 {
-                    var start = newCommand.Error.IndexOf(invalidParameterError, StringComparison.Ordinal) +
-                                invalidParameterError.Length;
-                    start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
-                    var nvp = newCommand.Error[start..end].Split(' ', 2);
-                    return NotFound($"Option '{nvp[0]}' parameter '{nvp[1]}' not found.");
+                    ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
+                    ReadOnlySpan<char> parameters = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidParameterError), "--"));
+                    (string key, string value) = SplitNameValuePair(parameters, ' ');
+                    return NotFound($"Option '{key}' parameter '{value}' not found.");
                 }
 
                 if (newCommand.ExitCode != 0)
@@ -256,9 +257,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
         private async Task<TemplateDictionary> GetTemplateDictionary()
         {
             var listCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new list");
-
-            var lines = listCommand.Output.Split('\n').ToList()
-                .FindAll(line => !string.IsNullOrWhiteSpace(line));
+            List<string> lines = listCommand.Output.Split(LineBreaks, StringSplitOptions.None).ToList().FindAll(line => !string.IsNullOrWhiteSpace(line));
 
             var headingIdx = lines.FindIndex(line => line.StartsWith('-'));
             var headings = lines[headingIdx].Split("  ");
@@ -278,7 +277,7 @@ namespace Steeltoe.NetCoreToolService.Controllers
                 var template = line[shortNameColStart..shortNameColEnd].Trim();
                 var templateInfo = new TemplateInfo
                 {
-                    Name = line[nameColStart..nameColEnd].Trim(),
+                    Name = line[..nameColEnd].Trim(),
                     Languages = line[languageColStart..languageColEnd].Trim(),
                     Tags = line[tagsColStart.. Math.Min(tagsColEnd, line.Length)].Trim(),
                 };
@@ -286,6 +285,45 @@ namespace Steeltoe.NetCoreToolService.Controllers
             }
 
             return dict;
+        }
+
+        private ReadOnlySpan<char> StripTextBefore(ReadOnlySpan<char> source, string textToFind, bool keepTextToFind = false)
+        {
+            int startIndex = source.IndexOf(textToFind, StringComparison.Ordinal);
+
+            if (startIndex == -1)
+            {
+                return source;
+            }
+
+            return keepTextToFind ? source[startIndex..] : source[(startIndex + textToFind.Length)..];
+        }
+
+        private ReadOnlySpan<char> GetStringOnLine(ReadOnlySpan<char> source)
+        {
+            int lineBreakIndex = source.IndexOfAny(LineBreakValues);
+            return lineBreakIndex == -1 ? source : source[..lineBreakIndex];
+        }
+
+        private (string Key, string Value) SplitNameValuePair(ReadOnlySpan<char> source, char separator)
+        {
+            Span<Range> destination = stackalloc Range[2];
+            int count = source.Split(destination, separator);
+
+            if (count == 2)
+            {
+                string key = source[destination[0]].ToString();
+                string value = source[destination[1]].ToString();
+                return (key, value);
+            }
+
+            if (count == 1)
+            {
+                string key = source[destination[0]].ToString();
+                return (key, string.Empty);
+            }
+
+            return (string.Empty, string.Empty);
         }
     }
 }

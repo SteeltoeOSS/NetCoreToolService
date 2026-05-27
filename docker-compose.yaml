@@ -1,8 +1,7 @@
-version: "3"
 services:
   net-core-tool-service:
     build: .
     environment:
       DOTNET_ENVIRONMENT: Development
     ports:
-      - "1922:80"
+      - "1922:8080"

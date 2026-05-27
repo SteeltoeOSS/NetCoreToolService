@@ -1,18 +1,14 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Nerdbank.GitVersioning" Condition="!Exists('packages.config')">
-      <Version>3.6.*</Version>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
-
   <Import Project="Version.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="$(NerdbankVersion)" PrivateAssets="All" />
+  </ItemGroup>
 
   <Target Name="CleanBaseOutput" AfterTargets="Clean">
     <RemoveDir Directories="$(BaseOutputPath)" />
