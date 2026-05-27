@@ -106,7 +106,7 @@ public class NewController : ControllerBase
         var oldTemplates = await GetTemplateDictionary();
         var uninstallCommand =
             await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}");
-        if (uninstallCommand.Output.Contains($"Could not find something to uninstall"))
+        if (uninstallCommand.Output.Contains("Could not find something to uninstall"))
         {
             return NotFound($"No templates with NuGet ID '{nuGetId}' installed.");
         }

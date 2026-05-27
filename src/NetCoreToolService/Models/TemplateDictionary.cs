@@ -9,6 +9,4 @@ namespace Steeltoe.NetCoreToolService.Models;
 /// <summary>
 /// A convenience dictionary for template information.
 /// </summary>
-public class TemplateDictionary : Dictionary<string, TemplateInfo>
-{
-}
+public class TemplateDictionary : Dictionary<string, TemplateInfo>;

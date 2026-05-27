@@ -284,7 +284,7 @@ The template ""mytemplate"" was created successfully.
 
         // Assert
         var file = Assert.IsType<FileContentResult>(result);
-        var _ = new ZipArchive(new MemoryStream(file.FileContents));
+        _ = new ZipArchive(new MemoryStream(file.FileContents));
     }
 
     /* ----------------------------------------------------------------- *
