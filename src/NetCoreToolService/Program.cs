@@ -2,64 +2,45 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System.Reflection;
+using System.Text.Json.Serialization;
+using Scalar.AspNetCore;
 using Steeltoe.Logging.DynamicConsole;
+using Steeltoe.Management.Endpoint.Actuators.All;
 using Steeltoe.NetCoreToolService.Models;
+using Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
 
-namespace Steeltoe.NetCoreToolService;
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-/// <summary>
-/// The Steeltoe Net Core Tool Service program.
-/// </summary>
-internal static class Program
+// Add services to the container.
+
+builder.Logging.AddDynamicConsole();
+builder.Services.AddAllActuators();
+
+builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    /// <summary>
-    /// Gets "About" details, such as version.
-    /// </summary>
-    public static About About { get; }
+    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+});
 
-    static Program()
-    {
-        var versionAttr = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-        string[] fields = versionAttr?.InformationalVersion.Split('+') ?? ["unknown"];
+builder.Services.AddTransient<ICommandExecutor, CommandExecutor>();
+builder.Services.AddOpenApi();
 
-        if (fields.Length == 1)
-        {
-            fields =
-            [
-                fields[0],
-                "unknown"
-            ];
-        }
+WebApplication app = builder.Build();
 
-        About = new About
-        {
-            Name = typeof(Program).Namespace ?? "unknown",
-            Version = fields[0],
-            Commit = fields[1]
-        };
-    }
+// Configure the HTTP request pipeline.
 
-    /// <summary>
-    /// Program entrypoint.
-    /// </summary>
-    public static void Main(string[] args)
-    {
-        CreateHostBuilder(args).Build().Run();
-    }
+app.UseHttpsRedirection();
+app.UseAuthorization();
 
-    /// <summary>
-    /// Create a host.
-    /// </summary>
-    /// <param name="args">
-    /// Command line arguments.
-    /// </param>
-    /// <returns>A host.</returns>
-    private static IHostBuilder CreateHostBuilder(string[] args)
-    {
-        return Host.CreateDefaultBuilder(args).ConfigureLogging((_, builder) => builder.AddDynamicConsole()).ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.UseStartup<Startup>();
-        });
-    }
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 }
+
+app.MapControllers();
+
+var logger = app.Services.GetRequiredService<ILogger<About>>();
+About.LogCurrent(logger);
+
+await app.RunAsync();

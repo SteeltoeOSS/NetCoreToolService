@@ -358,25 +358,29 @@ public sealed partial class NewController : ControllerBase
         Span<Range> destination = stackalloc Range[2];
         int count = source.Split(destination, separator);
 
-        if (count == 2)
+        switch (count)
         {
-            string key = source[destination[0]].ToString();
-            string value = source[destination[1]].ToString();
-            return (key, value);
+            case 2:
+            {
+                string key = source[destination[0]].ToString();
+                string value = source[destination[1]].ToString();
+                return (key, value);
+            }
+            case 1:
+            {
+                string key = source[destination[0]].ToString();
+                return (key, string.Empty);
+            }
+            default:
+            {
+                return (string.Empty, string.Empty);
+            }
         }
-
-        if (count == 1)
-        {
-            string key = source[destination[0]].ToString();
-            return (key, string.Empty);
-        }
-
-        return (string.Empty, string.Empty);
     }
 
     [LoggerMessage(LogLevel.Information, "New: template={Template}, options={Options}, packaging={Packaging}")]
     partial void LogNewTemplate(string template, string? options, string packaging);
 
-    [LoggerMessage(LogLevel.Debug, "Generated project in {Elapsed:m:s.fff}")]
+    [LoggerMessage(LogLevel.Debug, "Generated project in {Elapsed:c}")]
     partial void LogProjectGenerated(TimeSpan elapsed);
 }
