@@ -29,7 +29,6 @@ WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
-app.UseHttpsRedirection();
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
