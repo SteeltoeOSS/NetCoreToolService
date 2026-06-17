@@ -7,24 +7,13 @@ namespace Steeltoe.NetCoreToolService.Models;
 /// <summary>
 /// Application information, such as version.
 /// </summary>
-public sealed class About
-{
-    /* ----------------------------------------------------------------- *
-     * properties                                                        *
-     * ----------------------------------------------------------------- */
-
-    /// <summary>
-    /// Gets or sets the application name.
-    /// </summary>
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the application version.
-    /// </summary>
-    public string Version { get; set; }
-
-    /// <summary>
-    /// Gets or sets the application build source control commit ID.
-    /// </summary>
-    public string Commit { get; set; }
-}
+/// <param name="Name">
+/// The application name.
+/// </param>
+/// <param name="Version">
+/// The application version.
+/// </param>
+/// <param name="Commit">
+/// The application build source control commit ID.
+/// </param>
+internal readonly record struct About(string Name, string Version, string Commit);

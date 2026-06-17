@@ -7,24 +7,18 @@ namespace Steeltoe.NetCoreToolService.Models;
 /// <summary>
 /// Contains information about a Net Core Tool template.
 /// </summary>
-public class TemplateInfo
+/// <param name="Name">
+/// The name of the template.
+/// </param>
+/// <param name="Languages">
+/// The supported languages of the template.
+/// </param>
+/// <param name="Tags">
+/// The template tags.
+/// </param>
+public readonly record struct TemplateInfo(string Name, string Languages, string Tags)
 {
-    /// <summary>
-    /// Gets the name of the template.
-    /// </summary>
-    public string Name { get; internal init; }
-
-    /// <summary>
-    /// Gets the supported languages of the template.
-    /// </summary>
-    public string Languages { get; internal init; }
-
-    /// <summary>
-    /// Gets the template tags.
-    /// </summary>
-    public string Tags { get; internal init; }
-
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override string ToString()
     {
         return $"[name={Name},languages={Languages},tags={Tags}";

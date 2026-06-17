@@ -13,6 +13,7 @@
     <NerdbankVersion>3.9.*</NerdbankVersion>
     <SteeltoeVersion>4.2.*</SteeltoeVersion>
     <StyleCopVersion>1.2.0-beta.556</StyleCopVersion>
+    <SonarAnalyzerVersion>10.25.0.139117</SonarAnalyzerVersion>
     <SwashbuckleVersion>10.1.*</SwashbuckleVersion>
     <XunitVersion>3.2.*</XunitVersion>
     <XunitVisualStudioVersion>3.1.*</XunitVisualStudioVersion>

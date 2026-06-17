@@ -2,20 +2,16 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.AspNetCore.Http;
+using System.Buffers;
+using System.Diagnostics;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Steeltoe.NetCoreToolService.Models;
 using Steeltoe.NetCoreToolService.Packagers;
 using Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
 using Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+#pragma warning disable S2360 // Optional parameters should not be used
 
 namespace Steeltoe.NetCoreToolService.Controllers;
 
@@ -24,7 +20,7 @@ namespace Steeltoe.NetCoreToolService.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/new")]
-public class NewController : ControllerBase
+public sealed partial class NewController : ControllerBase
 {
     private const string DefaultOutput = "Sample";
     private const string DefaultPackaging = "zip";
@@ -43,16 +39,23 @@ public class NewController : ControllerBase
 
     private readonly Dictionary<string, IPackager> _packagers = new()
     {
-        { "zip", new ZipPackager() },
+        { "zip", new ZipPackager() }
     };
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="NewController"/> class.
+    /// Initializes a new instance of the <see cref="NewController" /> class.
     /// </summary>
-    /// <param name="commandExecutor">Injected command.</param>
-    /// <param name="logger">Injected logger.</param>
-    public NewController(ICommandExecutor commandExecutor, ILogger<NewController> logger = null)
+    /// <param name="commandExecutor">
+    /// Injected command.
+    /// </param>
+    /// <param name="logger">
+    /// Injected logger.
+    /// </param>
+    public NewController(ICommandExecutor commandExecutor, ILogger<NewController> logger)
     {
+        ArgumentNullException.ThrowIfNull(commandExecutor);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _commandExecutor = commandExecutor;
         _logger = logger;
     }
@@ -60,34 +63,44 @@ public class NewController : ControllerBase
     /// <summary>
     /// Gets the available Net Core Tool templates.
     /// </summary>
-    /// <returns>Templates.</returns>
+    /// <returns>
+    /// Templates.
+    /// </returns>
     [HttpGet]
     public async Task<ActionResult> GetTemplates()
     {
-        return Ok(await GetTemplateDictionary());
+        return Ok(await GetTemplateDictionaryAsync());
     }
 
     /// <summary>
     /// Installs the Net Core Tool templates for the specified NuGet ID.
     /// </summary>
-    /// <param name="nuGetId">Template NuGet ID.</param>
-    /// <returns>Information about the installed templates.</returns>
+    /// <param name="nuGetId">
+    /// Template NuGet ID.
+    /// </param>
+    /// <returns>
+    /// Information about the installed templates.
+    /// </returns>
     [HttpPut("nuget/{nuGetId}")]
     public async Task<ActionResult> InstallTemplates(string nuGetId)
     {
-        await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}");
-        var oldTemplates = await GetTemplateDictionary();
-        var installCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new install {nuGetId}");
+        ArgumentNullException.ThrowIfNull(nuGetId);
+
+        await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}", null, -1);
+        TemplateDictionary oldTemplates = await GetTemplateDictionaryAsync();
+        CommandResult installCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new install {nuGetId}", null, -1);
         const string notFoundError = "error NU1101: ";
-        if (installCommand.Output.Contains(notFoundError))
+
+        if (installCommand.Output.Contains(notFoundError, StringComparison.Ordinal))
         {
             ReadOnlySpan<char> outputSpan = installCommand.Output.AsSpan();
             ReadOnlySpan<char> messageSpan = GetStringOnLine(StripTextBefore(outputSpan, notFoundError)).Trim();
             return BadRequest(messageSpan.ToString());
         }
 
-        var newTemplates = await GetTemplateDictionary();
-        foreach (var oldTemplate in oldTemplates.Keys)
+        TemplateDictionary newTemplates = await GetTemplateDictionaryAsync();
+
+        foreach (string oldTemplate in oldTemplates.Keys)
         {
             newTemplates.Remove(oldTemplate);
         }
@@ -98,21 +111,28 @@ public class NewController : ControllerBase
     /// <summary>
     /// Uninstalls the Net Core Tool templates for the specified NuGet ID.
     /// </summary>
-    /// <param name="nuGetId">Template NuGet ID.</param>
-    /// <returns>Information about the installed templates.</returns>
+    /// <param name="nuGetId">
+    /// Template NuGet ID.
+    /// </param>
+    /// <returns>
+    /// Information about the installed templates.
+    /// </returns>
     [HttpDelete("nuget/{nuGetId}")]
     public async Task<ActionResult> UninstallTemplates(string nuGetId)
     {
-        var oldTemplates = await GetTemplateDictionary();
-        var uninstallCommand =
-            await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}");
-        if (uninstallCommand.Output.Contains("Could not find something to uninstall"))
+        ArgumentNullException.ThrowIfNull(nuGetId);
+
+        TemplateDictionary oldTemplates = await GetTemplateDictionaryAsync();
+        CommandResult uninstallCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}", null, -1);
+
+        if (uninstallCommand.Output.Contains("Could not find something to uninstall", StringComparison.Ordinal))
         {
             return NotFound($"No templates with NuGet ID '{nuGetId}' installed.");
         }
 
-        var newTemplates = await GetTemplateDictionary();
-        foreach (var newTemplate in newTemplates.Keys)
+        TemplateDictionary newTemplates = await GetTemplateDictionaryAsync();
+
+        foreach (string newTemplate in newTemplates.Keys)
         {
             oldTemplates.Remove(newTemplate);
         }
@@ -123,12 +143,19 @@ public class NewController : ControllerBase
     /// <summary>
     /// Returns "help" for the specified Net Core Tool template.
     /// </summary>
-    /// <param name="template">Template name.</param>
-    /// <returns>Template help.</returns>
+    /// <param name="template">
+    /// Template name.
+    /// </param>
+    /// <returns>
+    /// Template help.
+    /// </returns>
     [HttpGet("{template}/help")]
     public async Task<ActionResult> GetTemplateHelp(string template)
     {
-        var helpCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new {template} --help");
+        ArgumentNullException.ThrowIfNull(template);
+
+        CommandResult helpCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new {template} --help", null, -1);
+
         if (helpCommand.ExitCode != 0)
         {
             ReadOnlySpan<char> errorSpan = helpCommand.Error.AsSpan();
@@ -142,34 +169,43 @@ public class NewController : ControllerBase
     /// <summary>
     /// Gets a generated project for the specified Net Core Tool template.
     /// </summary>
-    /// <param name="template">Template name.</param>
-    /// <param name="options">Template options.</param>
-    /// <param name="packaging">Project packaging, e.g. zip.</param>
-    /// <returns>Project archive.</returns>
+    /// <param name="template">
+    /// Template name.
+    /// </param>
+    /// <param name="options">
+    /// Template options.
+    /// </param>
+    /// <param name="packaging">
+    /// Project packaging, e.g. zip.
+    /// </param>
+    /// <returns>
+    /// Project archive.
+    /// </returns>
     [HttpGet]
     [Route("{template}")]
-    public async Task<ActionResult> GetTemplateProject(
-        string template,
-        string options = null,
-        string packaging = DefaultPackaging)
+    public async Task<ActionResult> GetTemplateProject(string template, string options = null, string packaging = DefaultPackaging)
     {
+        ArgumentNullException.ThrowIfNull(template);
+
         var stopwatch = new Stopwatch();
         stopwatch.Start();
 
-        _logger?.LogInformation("New: template={Template}, options={Options}, packaging={Packaging}", template, options, packaging);
+        LogNewTemplate(template, options, packaging);
 
         try
         {
-            var output = DefaultOutput;
+            string output = DefaultOutput;
             var optionList = new List<string>();
+
             if (options is not null)
             {
-                foreach (var option in options.Split(','))
+                foreach (string option in options.Split(','))
                 {
                     if (option.Contains('='))
                     {
-                        var nvp = option.Split('=', 2);
-                        if (nvp[0].Equals("output"))
+                        string[] nvp = option.Split('=', 2);
+
+                        if (nvp[0] == "output")
                         {
                             output = nvp[1];
                             continue;
@@ -186,7 +222,7 @@ public class NewController : ControllerBase
                 }
             }
 
-            if (!_packagers.TryGetValue(packaging, out var packager))
+            if (!_packagers.TryGetValue(packaging, out IPackager packager))
             {
                 return BadRequest($"Unknown or unsupported packaging '{packaging}'.");
             }
@@ -195,99 +231,111 @@ public class NewController : ControllerBase
             var commandLine = new StringBuilder();
             commandLine.Append(NetCoreTool.Command).Append(" new ").Append(template);
             commandLine.Append(" --output=").Append(output);
-            foreach (var option in optionList)
+
+            foreach (string option in optionList)
             {
                 commandLine.Append(' ').Append(option);
             }
 
-            var newCommand =
-                await _commandExecutor.ExecuteAsync(commandLine.ToString(), projectDir.FullPath);
-
-            const string unknownTemplateError = "No templates found";
-            if (newCommand.Error.Contains(unknownTemplateError))
-            {
-                return NotFound($"Template '{template}' not found.");
-            }
-
-            const string invalidOptionError = "Invalid option(s)";
-            if (newCommand.Error.Contains(invalidOptionError))
-            {
-                ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
-                ReadOnlySpan<char> switchName = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidOptionError), "--"));
-                return NotFound($"Switch '{switchName}' not found.");
-            }
-
-            const string invalidSwitchError = "Invalid input switch:";
-            if (newCommand.Error.Contains(invalidSwitchError))
-            {
-                ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
-                ReadOnlySpan<char> switchName = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidSwitchError), "--"));
-                return NotFound($"Switch '{switchName}' not found.");
-            }
-
-            const string invalidParameterError = "Error: Invalid parameter(s):";
-            if (newCommand.Error.Contains(invalidParameterError))
-            {
-                ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
-                ReadOnlySpan<char> parameters = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidParameterError), "--"));
-                (string key, string value) = SplitNameValuePair(parameters, ' ');
-                return NotFound($"Option '{key}' parameter '{value}' not found.");
-            }
-
-            if (newCommand.ExitCode != 0)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, newCommand.Error.Trim());
-            }
-
-            if (!newCommand.Output.Contains(" was created successfully."))
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, newCommand.Output.Trim());
-            }
-
-            var package = packager.ToBytes(projectDir.FullPath);
-            return File(package, packager.MimeType, $"{output}{packager.FileExtension}");
+            return await ExecuteCommandAsync(template, commandLine.ToString(), projectDir, packager, output);
         }
         finally
         {
             stopwatch.Stop();
-            _logger?.LogDebug("Generated project in {Elapsed:m\\:s\\.fff}", stopwatch.Elapsed);
+            LogProjectGenerated(stopwatch.Elapsed);
         }
     }
 
-    private async Task<TemplateDictionary> GetTemplateDictionary()
+    private async Task<ActionResult> ExecuteCommandAsync(string template, string commandLine, TempDirectory projectDir, IPackager packager, string output)
     {
-        var listCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new list");
+        CommandResult newCommand = await _commandExecutor.ExecuteAsync(commandLine, projectDir.FullPath, -1);
+
+        const string unknownTemplateError = "No templates found";
+
+        if (newCommand.Error.Contains(unknownTemplateError, StringComparison.Ordinal))
+        {
+            return NotFound($"Template '{template}' not found.");
+        }
+
+        const string invalidOptionError = "Invalid option(s)";
+
+        if (newCommand.Error.Contains(invalidOptionError, StringComparison.Ordinal))
+        {
+            ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
+            ReadOnlySpan<char> switchName = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidOptionError), "--"));
+            return NotFound($"Switch '{switchName}' not found.");
+        }
+
+        const string invalidSwitchError = "Invalid input switch:";
+
+        if (newCommand.Error.Contains(invalidSwitchError, StringComparison.Ordinal))
+        {
+            ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
+            ReadOnlySpan<char> switchName = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidSwitchError), "--"));
+            return NotFound($"Switch '{switchName}' not found.");
+        }
+
+        const string invalidParameterError = "Error: Invalid parameter(s):";
+
+        if (newCommand.Error.Contains(invalidParameterError, StringComparison.Ordinal))
+        {
+            ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
+            ReadOnlySpan<char> parameters = GetStringOnLine(StripTextBefore(StripTextBefore(errorSpan, invalidParameterError), "--"));
+            (string key, string value) = SplitNameValuePair(parameters, ' ');
+            return NotFound($"Option '{key}' parameter '{value}' not found.");
+        }
+
+        if (newCommand.ExitCode != 0)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, newCommand.Error.Trim());
+        }
+
+        if (!newCommand.Output.Contains(" was created successfully.", StringComparison.Ordinal))
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, newCommand.Output.Trim());
+        }
+
+        byte[] package = packager.ToBytes(projectDir.FullPath);
+        return File(package, packager.MimeType, $"{output}{packager.FileExtension}");
+    }
+
+    private async Task<TemplateDictionary> GetTemplateDictionaryAsync()
+    {
+        CommandResult listCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1);
         List<string> lines = listCommand.Output.Split(LineBreaks, StringSplitOptions.None).ToList().FindAll(line => !string.IsNullOrWhiteSpace(line));
 
-        var headingIdx = lines.FindIndex(line => line.StartsWith('-'));
-        var headings = lines[headingIdx].Split("  ");
+        int headingIdx = lines.FindIndex(line => line.StartsWith('-'));
+        string[] headings = lines[headingIdx].Split("  ");
         const int nameColStart = 0;
-        var nameColEnd = nameColStart + headings[0].Length;
-        var shortNameColStart = nameColEnd + 2;
-        var shortNameColEnd = shortNameColStart + headings[1].Length;
-        var languageColStart = shortNameColEnd + 2;
-        var languageColEnd = languageColStart + headings[2].Length;
-        var tagsColStart = languageColEnd + 2;
-        var tagsColEnd = tagsColStart + headings[3].Length;
+        int nameColEnd = nameColStart + headings[0].Length;
+        int shortNameColStart = nameColEnd + 2;
+        int shortNameColEnd = shortNameColStart + headings[1].Length;
+        int languageColStart = shortNameColEnd + 2;
+        int languageColEnd = languageColStart + headings[2].Length;
+        int tagsColStart = languageColEnd + 2;
+        int tagsColEnd = tagsColStart + headings[3].Length;
         lines = lines.GetRange(headingIdx + 1, lines.Count - headingIdx - 1);
 
         var dict = new TemplateDictionary();
-        foreach (var line in lines)
+
+        foreach (string line in lines)
         {
-            var template = line[shortNameColStart..shortNameColEnd].Trim();
+            string template = line[shortNameColStart..shortNameColEnd].Trim();
+
             var templateInfo = new TemplateInfo
             {
                 Name = line[..nameColEnd].Trim(),
                 Languages = line[languageColStart..languageColEnd].Trim(),
-                Tags = line[tagsColStart.. Math.Min(tagsColEnd, line.Length)].Trim(),
+                Tags = line[tagsColStart..Math.Min(tagsColEnd, line.Length)].Trim()
             };
+
             dict.Add(template, templateInfo);
         }
 
         return dict;
     }
 
-    private ReadOnlySpan<char> StripTextBefore(ReadOnlySpan<char> source, string textToFind, bool keepTextToFind = false)
+    private static ReadOnlySpan<char> StripTextBefore(ReadOnlySpan<char> source, string textToFind, bool keepTextToFind = false)
     {
         int startIndex = source.IndexOf(textToFind, StringComparison.Ordinal);
 
@@ -299,13 +347,13 @@ public class NewController : ControllerBase
         return keepTextToFind ? source[startIndex..] : source[(startIndex + textToFind.Length)..];
     }
 
-    private ReadOnlySpan<char> GetStringOnLine(ReadOnlySpan<char> source)
+    private static ReadOnlySpan<char> GetStringOnLine(ReadOnlySpan<char> source)
     {
         int lineBreakIndex = source.IndexOfAny(LineBreakValues);
         return lineBreakIndex == -1 ? source : source[..lineBreakIndex];
     }
 
-    private (string Key, string Value) SplitNameValuePair(ReadOnlySpan<char> source, char separator)
+    private static (string Key, string Value) SplitNameValuePair(ReadOnlySpan<char> source, char separator)
     {
         Span<Range> destination = stackalloc Range[2];
         int count = source.Split(destination, separator);
@@ -325,4 +373,10 @@ public class NewController : ControllerBase
 
         return (string.Empty, string.Empty);
     }
+
+    [LoggerMessage(LogLevel.Information, "New: template={Template}, options={Options}, packaging={Packaging}")]
+    partial void LogNewTemplate(string template, string options, string packaging);
+
+    [LoggerMessage(LogLevel.Debug, "Generated project in {Elapsed:m:s.fff}")]
+    partial void LogProjectGenerated(TimeSpan elapsed);
 }

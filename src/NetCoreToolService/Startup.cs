@@ -2,42 +2,25 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using System.Text.Json.Serialization;
 using Microsoft.OpenApi;
 using Steeltoe.Management.Endpoint.Actuators.All;
+using Steeltoe.NetCoreToolService.Models;
 using Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
-using System.Text.Json.Serialization;
 
 namespace Steeltoe.NetCoreToolService;
 
 /// <summary>
 /// The Steeltoe Net Core Tool Service dependency injection setup.
 /// </summary>
-public class Startup
+public sealed partial class Startup
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Startup"/> class.
-    /// </summary>
-    /// <param name="configuration">Injected configuration.</param>
-    public Startup(IConfiguration configuration)
-    {
-        Configuration = configuration;
-    }
-
-    /// <summary>
-    /// Gets the configuration.
-    /// </summary>
-    public IConfiguration Configuration { get; }
-
     /// <summary>
     /// Called by the runtime.
     /// </summary>
-    /// <param name="services">Injected services.</param>
+    /// <param name="services">
+    /// Injected services.
+    /// </param>
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddControllers().AddJsonOptions(options =>
@@ -45,24 +28,36 @@ public class Startup
             options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
         });
+
         services.AddTransient<ICommandExecutor, CommandExecutor>();
         services.AddAllActuators();
+
         services.AddSwaggerGen(c =>
         {
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Steeltoe.NetCoreToolService", Version = "v0" });
+            c.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = "Steeltoe.NetCoreToolService",
+                Version = "v0"
+            });
         });
     }
 
     /// <summary>
     /// Called by the runtime.  Sets up HTTP request pipeline.
     /// </summary>
-    /// <param name="app">Injected IApplicationBuilder.</param>
-    /// <param name="env">Injected IWebHostEnvironment.</param>
-    /// <param name="logger">Injected ILogger.</param>
+    /// <param name="app">
+    /// Injected IApplicationBuilder.
+    /// </param>
+    /// <param name="env">
+    /// Injected IWebHostEnvironment.
+    /// </param>
+    /// <param name="logger">
+    /// Injected ILogger.
+    /// </param>
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
     {
-        var about = Program.About;
-        logger.LogInformation("{Program}, version {Version} [{Commit}]", about.Name, about.Version, about.Commit);
+        About about = Program.About;
+        LogVersion(logger, about.Name, about.Version, about.Commit);
 
         if (env.IsDevelopment())
         {
@@ -74,6 +69,9 @@ public class Startup
         app.UseHttpsRedirection();
         app.UseRouting();
         app.UseAuthorization();
-        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        app.UseEndpoints(endpoints => endpoints.MapControllers());
     }
+
+    [LoggerMessage(LogLevel.Information, "{Program}, version {Version} [{Commit}]")]
+    static partial void LogVersion(ILogger<Startup> logger, string program, string version, string commit);
 }

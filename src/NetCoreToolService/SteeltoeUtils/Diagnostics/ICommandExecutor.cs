@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System.Threading.Tasks;
-
 namespace Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
 
 /// <summary>
@@ -12,12 +10,22 @@ namespace Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
 public interface ICommandExecutor
 {
     /// <summary>
-    /// Execute the command and return the result.
+    /// Executes the command and returns the result.
     /// </summary>
-    /// <param name="command">Command to be executed.</param>
-    /// <param name="workingDirectory">The directory that contains the command process.</param>
-    /// <param name="timeout">The amount of time in milliseconds to wait for command to complete.</param>
-    /// <returns>Command result.</returns>
-    /// <exception cref="CommandException">If a process can not be started for command.</exception>
-    Task<CommandResult> ExecuteAsync(string command, string workingDirectory = null, int timeout = -1);
+    /// <param name="command">
+    /// Command to be executed.
+    /// </param>
+    /// <param name="workingDirectory">
+    /// The directory that contains the command process.
+    /// </param>
+    /// <param name="timeout">
+    /// The amount of time in milliseconds to wait for the command to complete.
+    /// </param>
+    /// <returns>
+    /// The command result.
+    /// </returns>
+    /// <exception cref="CommandException">
+    /// Thrown if a process can not be started for the specified command.
+    /// </exception>
+    Task<CommandResult> ExecuteAsync(string command, string workingDirectory, int timeout);
 }

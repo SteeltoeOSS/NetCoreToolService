@@ -7,20 +7,13 @@ namespace Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
 /// <summary>
 /// A simple representation of a command result.
 /// </summary>
-public struct CommandResult
-{
-    /// <summary>
-    /// Gets or sets the command exit code.
-    /// </summary>
-    public int ExitCode { get; set; }
-
-    /// <summary>
-    /// Gets or sets the command exit STDOUT.
-    /// </summary>
-    public string Output { get; set; }
-
-    /// <summary>
-    /// Gets or sets the command exit STDERR.
-    /// </summary>
-    public string Error { get; set; }
-}
+/// <param name="ExitCode">
+/// The command exit code.
+/// </param>
+/// <param name="Output">
+/// The command exit STDOUT.
+/// </param>
+/// <param name="Error">
+/// The command exit STDERR.
+/// </param>
+public readonly record struct CommandResult(int ExitCode, string Output, string Error);

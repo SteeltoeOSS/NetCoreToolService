@@ -2,21 +2,19 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System.IO;
-
 namespace Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
 
 /// <summary>
 /// A temporary directory.
 /// </summary>
-public class TempDirectory : TempPath
+public sealed class TempDirectory(string prefix)
+    : TempPath(prefix)
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="TempDirectory"/> class.
+    /// Initializes a new instance of the <see cref="TempDirectory" /> class.
     /// </summary>
-    /// <param name="prefix">Temporary directory prefix.</param>
-    public TempDirectory(string prefix = null)
-        : base(prefix)
+    public TempDirectory()
+        : this(null)
     {
     }
 
@@ -28,7 +26,7 @@ public class TempDirectory : TempPath
         Directory.CreateDirectory(FullPath);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     protected override void Dispose(bool disposing)
     {
         if (!Directory.Exists(FullPath))

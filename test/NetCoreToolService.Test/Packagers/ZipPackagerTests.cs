@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System.IO;
 using System.IO.Compression;
 using FluentAssertions;
 using Steeltoe.NetCoreToolService.Packagers;
@@ -11,12 +10,8 @@ using Xunit;
 
 namespace Steeltoe.NetCoreToolService.Test.Packagers;
 
-public class ZipPackagerTests
+public sealed class ZipPackagerTests
 {
-    /* ----------------------------------------------------------------- *
-     * positive tests                                                    *
-     * ----------------------------------------------------------------- */
-
     [Fact]
     public void ToStream_Should_Create_Zip_Archive()
     {
@@ -25,7 +20,7 @@ public class ZipPackagerTests
         var tempDir = new TempDirectory();
 
         // Act
-        var buf = archiver.ToBytes(tempDir.FullPath);
+        byte[] buf = archiver.ToBytes(tempDir.FullPath);
 
         // Assert
         new ZipArchive(new MemoryStream(buf)).Should().BeOfType<ZipArchive>();
@@ -37,17 +32,17 @@ public class ZipPackagerTests
         // Arrange
         var archiver = new ZipPackager();
         using var tempDir = new TempDirectory();
-        var d1 = Path.Join(tempDir.FullPath, "d1");
+        string d1 = Path.Join(tempDir.FullPath, "d1");
         Directory.CreateDirectory(d1);
-        var f1 = Path.Join(d1, "f1");
+        string f1 = Path.Join(d1, "f1");
         File.WriteAllText(f1, "f1 stuff");
 
         // Act
-        var buf = archiver.ToBytes(tempDir.FullPath);
+        byte[] buf = archiver.ToBytes(tempDir.FullPath);
 
         // Assert
         var zip = new ZipArchive(new MemoryStream(buf));
-        using var entries = zip.Entries.GetEnumerator();
+        using IEnumerator<ZipArchiveEntry> entries = zip.Entries.GetEnumerator();
         entries.MoveNext().Should().BeTrue();
         Assert.NotNull(entries.Current);
         entries.Current.FullName.Should().Be($"d1{Path.DirectorySeparatorChar}");
@@ -66,17 +61,17 @@ public class ZipPackagerTests
         // Arrange
         var archiver = new ZipPackager();
         using var tempDir = new TempDirectory();
-        var d1 = Path.Join(tempDir.FullPath, "d1");
+        string d1 = Path.Join(tempDir.FullPath, "d1");
         Directory.CreateDirectory(d1);
-        var d2 = Path.Join(d1, "d2");
+        string d2 = Path.Join(d1, "d2");
         Directory.CreateDirectory(d2);
 
         // Act
-        var buf = archiver.ToBytes(tempDir.FullPath);
+        byte[] buf = archiver.ToBytes(tempDir.FullPath);
 
         // Assert
         var zip = new ZipArchive(new MemoryStream(buf));
-        using var entries = zip.Entries.GetEnumerator();
+        using IEnumerator<ZipArchiveEntry> entries = zip.Entries.GetEnumerator();
         entries.MoveNext().Should().BeTrue();
         Assert.NotNull(entries.Current);
         entries.Current.FullName.Should().Be($"d1{Path.DirectorySeparatorChar}");
@@ -95,7 +90,7 @@ public class ZipPackagerTests
         var archiver = new ZipPackager();
 
         // Act
-        var packaging = archiver.Name;
+        string packaging = archiver.Name;
 
         // Assert
         packaging.Should().Be("zip");
@@ -108,7 +103,7 @@ public class ZipPackagerTests
         var archiver = new ZipPackager();
 
         // Act
-        var ext = archiver.FileExtension;
+        string ext = archiver.FileExtension;
 
         // Assert
         ext.Should().Be(".zip");
@@ -121,13 +116,9 @@ public class ZipPackagerTests
         var archiver = new ZipPackager();
 
         // Act
-        var ext = archiver.MimeType;
+        string ext = archiver.MimeType;
 
         // Assert
         ext.Should().Be("application/zip");
     }
-
-    /* ----------------------------------------------------------------- *
-     * negative tests                                                    *
-     * ----------------------------------------------------------------- */
 }

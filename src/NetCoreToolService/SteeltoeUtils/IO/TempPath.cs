@@ -2,9 +2,6 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.IO;
-
 namespace Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
 
 /// <summary>
@@ -12,25 +9,6 @@ namespace Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
 /// </summary>
 public abstract class TempPath : IDisposable
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TempPath"/> class.
-    /// </summary>
-    /// <param name="prefix">Temporary path prefix.</param>
-    protected TempPath(string prefix = null)
-    {
-        Name = $"{prefix ?? string.Empty}{Guid.NewGuid()}";
-        FullPath = Path.Combine(Path.GetTempPath(), Name);
-        Initialize();
-    }
-
-    /// <summary>
-    /// Finalizes an instance of the <see cref="TempPath"/> class.
-    /// </summary>
-    ~TempPath()
-    {
-        Dispose(false);
-    }
-
     /// <summary>
     /// Gets the absolute path of the TempPath.
     /// </summary>
@@ -40,6 +18,19 @@ public abstract class TempPath : IDisposable
     /// Gets the name of the TempPath.
     /// </summary>
     public string Name { get; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TempPath" /> class.
+    /// </summary>
+    /// <param name="prefix">
+    /// Temporary path prefix.
+    /// </param>
+    protected TempPath(string prefix)
+    {
+        Name = $"{prefix ?? string.Empty}{Guid.NewGuid()}";
+        FullPath = Path.Combine(Path.GetTempPath(), Name);
+        Initialize();
+    }
 
     /// <summary>
     /// Ensures the temporary path is deleted.
@@ -53,7 +44,9 @@ public abstract class TempPath : IDisposable
     /// <summary>
     /// Ensures the temporary path is deleted.
     /// </summary>
-    /// <param name="disposing">If disposing.</param>
+    /// <param name="disposing">
+    /// <c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.
+    /// </param>
     protected abstract void Dispose(bool disposing);
 
     /// <summary>
@@ -66,5 +59,13 @@ public abstract class TempPath : IDisposable
     private void Initialize()
     {
         InitializePath();
+    }
+
+    /// <summary>
+    /// Finalizes an instance of the <see cref="TempPath" /> class.
+    /// </summary>
+    ~TempPath()
+    {
+        Dispose(false);
     }
 }
