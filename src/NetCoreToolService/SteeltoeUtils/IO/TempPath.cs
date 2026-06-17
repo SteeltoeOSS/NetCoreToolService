@@ -25,7 +25,7 @@ public abstract class TempPath : IDisposable
     /// <param name="prefix">
     /// Temporary path prefix.
     /// </param>
-    protected TempPath(string prefix)
+    protected TempPath(string? prefix)
     {
         Name = $"{prefix ?? string.Empty}{Guid.NewGuid()}";
         FullPath = Path.Combine(Path.GetTempPath(), Name);

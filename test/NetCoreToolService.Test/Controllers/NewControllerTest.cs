@@ -27,9 +27,9 @@ public sealed class NewControllerTest
         {
             ExitCode = 0,
             Output = """
-                -------------------  --------  ---------  ---------
-                My Template          myt       lang       tags
-                My Other Template    myot      otherlang  othertags
+                -------------------  --------  ----------  ----------
+                My Template          myt       lang        tags
+                My Other Template    my-ot     other-lang  other-tags
                 """
         });
 
@@ -46,10 +46,10 @@ public sealed class NewControllerTest
         templates["myt"].Name.Should().Be("My Template");
         templates["myt"].Languages.Should().Be("lang");
         templates["myt"].Tags.Should().Be("tags");
-        templates.Keys.Should().Contain("myot");
-        templates["myot"].Name.Should().Be("My Other Template");
-        templates["myot"].Languages.Should().Be("otherlang");
-        templates["myot"].Tags.Should().Be("othertags");
+        templates.Keys.Should().Contain("my-ot");
+        templates["my-ot"].Name.Should().Be("My Other Template");
+        templates["my-ot"].Languages.Should().Be("other-lang");
+        templates["my-ot"].Tags.Should().Be("other-tags");
     }
 
     [Fact]
@@ -62,19 +62,19 @@ public sealed class NewControllerTest
         {
             ExitCode = 0,
             Output = """
-                -------------------  --------  ---------  ---------
-                My Template          myt       lang       tags
-                My Other Template    myot      otherlang  othertags
+                -------------------  --------  ----------  ----------
+                My Template          myt       lang        tags
+                My Other Template    my-ot     other-lang  other-tags
                 """
         }).ReturnsAsync(new CommandResult
         {
             ExitCode = 0,
             Output = """
-                -------------------  --------  ---------  ----------
-                A New Template       ant       smalltalk  newstuff
-                My Template          myt       lang       tags
-                My Other Template    myot      otherlang  othertags
-                Other New Template   ont       bigtalk    otherstuff
+                -------------------  --------  ----------  -----------
+                A New Template       ant       smalltalk   new-stuff
+                My Template          myt       lang        tags
+                My Other Template    my-ot     other-lang  other-tags
+                Other New Template   ont       big-talk    other-stuff
                 """
         });
 
@@ -95,10 +95,10 @@ public sealed class NewControllerTest
         templates.Count.Should().Be(2);
         templates["ant"].Name.Should().Be("A New Template");
         templates["ant"].Languages.Should().Be("smalltalk");
-        templates["ant"].Tags.Should().Be("newstuff");
+        templates["ant"].Tags.Should().Be("new-stuff");
         templates["ont"].Name.Should().Be("Other New Template");
-        templates["ont"].Languages.Should().Be("bigtalk");
-        templates["ont"].Tags.Should().Be("otherstuff");
+        templates["ont"].Languages.Should().Be("big-talk");
+        templates["ont"].Tags.Should().Be("other-stuff");
     }
 
     [Fact]
@@ -111,19 +111,19 @@ public sealed class NewControllerTest
         {
             ExitCode = 0,
             Output = """
-                -------------------  --------  ---------  ----------
-                A New Template       ant       smalltalk  newstuff
-                My Template          myt       lang       tags
-                My Other Template    myot      otherlang  othertags
-                Other New Template   ont       bigtalk    otherstuff
+                -------------------  --------  ----------  -----------
+                A New Template       ant       smalltalk   new-stuff
+                My Template          myt       lang        tags
+                My Other Template    my-ot     other-lang  other-tags
+                Other New Template   ont       big-talk    other-stuff
                 """
         }).ReturnsAsync(new CommandResult
         {
             ExitCode = 0,
             Output = """
-                -------------------  --------  ---------  ---------
-                My Template          myt       lang       tags
-                My Other Template    myot      otherlang  othertags
+                -------------------  --------  ----------  ----------
+                My Template          myt       lang        tags
+                My Other Template    my-ot     other-lang  other-tags
                 """
         });
 
@@ -144,10 +144,10 @@ public sealed class NewControllerTest
         templates.Count.Should().Be(2);
         templates["ant"].Name.Should().Be("A New Template");
         templates["ant"].Languages.Should().Be("smalltalk");
-        templates["ant"].Tags.Should().Be("newstuff");
+        templates["ant"].Tags.Should().Be("new-stuff");
         templates["ont"].Name.Should().Be("Other New Template");
-        templates["ont"].Languages.Should().Be("bigtalk");
-        templates["ont"].Tags.Should().Be("otherstuff");
+        templates["ont"].Languages.Should().Be("big-talk");
+        templates["ont"].Tags.Should().Be("other-stuff");
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --help", null, -1)).ReturnsAsync(new CommandResult
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --help", null, -1)).ReturnsAsync(new CommandResult
         {
             ExitCode = 0,
             Output = "Some helpful tips for you"
@@ -165,7 +165,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateHelp("mytemplate");
+        ActionResult result = await controller.GetTemplateHelp("my-template");
 
         // Assert
         var ok = Assert.IsType<OkObjectResult>(result);
@@ -179,11 +179,11 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
         {
             ExitCode = 0,
             Output = """
-                The template "mytemplate" was created successfully.
+                The template "my-template" was created successfully.
                 """,
             Error = string.Empty
         });
@@ -191,7 +191,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate");
+        ActionResult result = await controller.GetTemplateProject("my-template");
 
         // Assert
         Assert.IsType<FileContentResult>(result);
@@ -203,11 +203,11 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
         {
             ExitCode = 0,
             Output = """
-                The template "mytemplate" was created successfully.
+                The template "my-template" was created successfully.
                 """,
             Error = string.Empty
         });
@@ -215,7 +215,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate");
+        ActionResult result = await controller.GetTemplateProject("my-template");
 
         // Assert
         var file = Assert.IsType<FileContentResult>(result);
@@ -229,11 +229,11 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Joe", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Joe", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
         {
             ExitCode = 0,
             Output = """
-                The template "mytemplate" was created successfully.
+                The template "my-template" was created successfully.
                 """,
             Error = string.Empty
         });
@@ -241,7 +241,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate", "output=Joe");
+        ActionResult result = await controller.GetTemplateProject("my-template", "output=Joe");
 
         // Assert
         var file = Assert.IsType<FileContentResult>(result);
@@ -254,11 +254,11 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
         {
             ExitCode = 0,
             Output = """
-                The template "mytemplate" was created successfully.
+                The template "my-template" was created successfully.
                 """,
             Error = string.Empty
         });
@@ -266,7 +266,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate", packaging: "zip");
+        ActionResult result = await controller.GetTemplateProject("my-template", packaging: "zip");
 
         // Assert
         var file = Assert.IsType<FileContentResult>(result);
@@ -283,9 +283,9 @@ public sealed class NewControllerTest
         {
             ExitCode = 0,
             Output = """
-                -------------------  --------  ---------  ---------
-                My Template          myt       lang       tags
-                My Other Template    myot      otherlang  othertags
+                -------------------  --------  ----------  ----------
+                My Template          myt       lang        tags
+                My Other Template    my-ot     other-lang  other-tags
                 """
         });
 
@@ -342,22 +342,20 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new nosuchtemplate --help", null, -1)).ReturnsAsync(new CommandResult
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new no-such-template --help", null, -1)).ReturnsAsync(new CommandResult
         {
             ExitCode = 6,
-            Error = """
-                No templates found matching: 'nosuchtemplate'.
-                """
+            Error = "No templates found matching: 'no-such-template'."
         });
 
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateHelp("nosuchtemplate");
+        ActionResult result = await controller.GetTemplateHelp("no-such-template");
 
         // Assert
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("No templates found matching: 'nosuchtemplate'.");
+        notFound.Value.Should().Be("No templates found matching: 'no-such-template'.");
     }
 
     [Fact]
@@ -366,22 +364,21 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new nosuchtemplate --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 14,
-            Error = """
-                No templates found matching: 'nosuchtemplate'.
-                """
-        });
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new no-such-template --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(
+            new CommandResult
+            {
+                ExitCode = 14,
+                Error = "No templates found matching: 'no-such-template'."
+            });
 
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("nosuchtemplate");
+        ActionResult result = await controller.GetTemplateProject("no-such-template");
 
         // Assert
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("Template 'nosuchtemplate' not found.");
+        notFound.Value.Should().Be("Template 'no-such-template' not found.");
     }
 
     [Fact]
@@ -390,7 +387,7 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Sample --unknown-switch", It.IsAny<string>(), -1)).ReturnsAsync(
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample --unknown-switch", It.IsAny<string>(), -1)).ReturnsAsync(
             new CommandResult
             {
                 ExitCode = 5,
@@ -404,7 +401,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate", "unknown-switch");
+        ActionResult result = await controller.GetTemplateProject("my-template", "unknown-switch");
 
         // Assert
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
@@ -417,7 +414,7 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Sample --unknown-switch", It.IsAny<string>(), -1)).ReturnsAsync(
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample --unknown-switch", It.IsAny<string>(), -1)).ReturnsAsync(
             new CommandResult
             {
                 ExitCode = 5,
@@ -431,7 +428,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate", "unknown-switch");
+        ActionResult result = await controller.GetTemplateProject("my-template", "unknown-switch");
 
         // Assert
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
@@ -444,26 +441,26 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Sample --myoption=unknown", It.IsAny<string>(), -1)).ReturnsAsync(
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample --my-option=unknown", It.IsAny<string>(), -1)).ReturnsAsync(
             new CommandResult
             {
                 ExitCode = 0,
                 Output = string.Empty,
                 Error = """
                     Error: Invalid parameter(s):
-                    --myoption unknown
-                        'unknown' is not a valid value for --myoption
+                    --my-option unknown
+                        'unknown' is not a valid value for --my-option
                     """
             });
 
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate", "myoption=unknown");
+        ActionResult result = await controller.GetTemplateProject("my-template", "my-option=unknown");
 
         // Assert
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("Option 'myoption' parameter 'unknown' not found.");
+        notFound.Value.Should().Be("Option 'my-option' parameter 'unknown' not found.");
     }
 
     [Fact]
@@ -472,22 +469,22 @@ public sealed class NewControllerTest
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new mytemplate --output=Sample --myoption=unknown", It.IsAny<string>(), -1)).ReturnsAsync(
+        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample --my-option=unknown", It.IsAny<string>(), -1)).ReturnsAsync(
             new CommandResult
             {
                 ExitCode = 0,
                 Output = string.Empty,
                 Error = """
                     Error: Invalid parameter(s):
-                    --myoption unknown
-                        'unknown' is not a valid value for --myoption
+                    --my-option unknown
+                        'unknown' is not a valid value for --my-option
                     """
             });
 
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate", packaging: "acme-packaging");
+        ActionResult result = await controller.GetTemplateProject("my-template", packaging: "acme-packaging");
 
         // Assert
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
@@ -510,7 +507,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate");
+        ActionResult result = await controller.GetTemplateProject("my-template");
 
         // Assert
         var internalServerError = Assert.IsType<ObjectResult>(result);
@@ -534,7 +531,7 @@ public sealed class NewControllerTest
         var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("mytemplate");
+        ActionResult result = await controller.GetTemplateProject("my-template");
 
         // Assert
         var internalServerError = Assert.IsType<ObjectResult>(result);

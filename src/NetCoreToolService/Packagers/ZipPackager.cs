@@ -22,7 +22,7 @@ public sealed class ZipPackager : IPackager
     private const int UnixFilePermissions = 0b_0000_0001_1010_0100_0000_0000_0000_0000;
     private const int UnixDirectoryPermissions = 0b_0000_0001_1110_1101_0000_0000_0000_0000;
 
-    private const CompressionLevel CompressionLevel = System.IO.Compression.CompressionLevel.SmallestSize;
+    private const CompressionLevel Level = CompressionLevel.SmallestSize;
 
     /// <summary>
     /// Gets the name of the ZipArchiver ("zip").
@@ -55,11 +55,8 @@ public sealed class ZipPackager : IPackager
         return buffer.ToArray();
     }
 
-    private void AddPathToArchive(ZipArchive archive, string rootPath, string path)
+    private static void AddPathToArchive(ZipArchive archive, string rootPath, string? path)
     {
-        ArgumentNullException.ThrowIfNull(archive);
-        ArgumentNullException.ThrowIfNull(rootPath);
-
         path ??= rootPath;
         var directory = new DirectoryInfo(path);
 
@@ -75,7 +72,7 @@ public sealed class ZipPackager : IPackager
 
         foreach (FileInfo file in directory.GetFiles())
         {
-            ZipArchiveEntry entry = archive.CreateEntry(Path.GetRelativePath(rootPath, file.FullName), CompressionLevel);
+            ZipArchiveEntry entry = archive.CreateEntry(Path.GetRelativePath(rootPath, file.FullName), Level);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {

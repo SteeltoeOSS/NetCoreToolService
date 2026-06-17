@@ -7,7 +7,7 @@ namespace Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
 /// <summary>
 /// A temporary directory.
 /// </summary>
-public sealed class TempDirectory(string prefix)
+public sealed class TempDirectory(string? prefix)
     : TempPath(prefix)
 {
     /// <summary>

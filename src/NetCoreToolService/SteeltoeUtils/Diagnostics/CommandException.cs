@@ -10,13 +10,13 @@ namespace Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
 public sealed class CommandException : Exception
 {
     /// <inheritdoc cref="Exception" />
-    public CommandException(string message)
+    public CommandException(string? message)
         : base(message)
     {
     }
 
     /// <inheritdoc cref="Exception" />
-    public CommandException(string message, Exception innerException)
+    public CommandException(string? message, Exception? innerException)
         : base(message, innerException)
     {
     }

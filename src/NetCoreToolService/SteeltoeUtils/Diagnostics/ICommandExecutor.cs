@@ -27,5 +27,5 @@ public interface ICommandExecutor
     /// <exception cref="CommandException">
     /// Thrown if a process can not be started for the specified command.
     /// </exception>
-    Task<CommandResult> ExecuteAsync(string command, string workingDirectory, int timeout);
+    Task<CommandResult> ExecuteAsync(string command, string? workingDirectory, int timeout);
 }

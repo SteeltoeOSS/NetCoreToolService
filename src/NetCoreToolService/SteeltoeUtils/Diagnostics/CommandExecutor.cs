@@ -26,7 +26,7 @@ public sealed partial class CommandExecutor : ICommandExecutor
     }
 
     /// <inheritdoc />
-    public async Task<CommandResult> ExecuteAsync(string command, string workingDirectory, int timeout)
+    public async Task<CommandResult> ExecuteAsync(string command, string? workingDirectory, int timeout)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -73,10 +73,10 @@ public sealed partial class CommandExecutor : ICommandExecutor
                 throw new CommandException($"'{command}' failed to start; no details available");
             }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            LogStartThrown(commandId, ex.Message);
-            throw new CommandException($"'{command}' failed to start: {ex.Message}", ex);
+            LogStartThrown(commandId, exception.Message);
+            throw new CommandException($"'{command}' failed to start: {exception.Message}", exception);
         }
 
         process.BeginOutputReadLine();
@@ -128,9 +128,9 @@ public sealed partial class CommandExecutor : ICommandExecutor
         return Interlocked.Increment(ref _commandCounter);
     }
 
-    private static Process CreateProcess(string command, string workingDirectory)
+    private static Process CreateProcess(string command, string? workingDirectory)
     {
-        Process process = null;
+        Process? process = null;
 
         try
         {

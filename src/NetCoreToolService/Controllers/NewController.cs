@@ -183,7 +183,7 @@ public sealed partial class NewController : ControllerBase
     /// </returns>
     [HttpGet]
     [Route("{template}")]
-    public async Task<ActionResult> GetTemplateProject(string template, string options = null, string packaging = DefaultPackaging)
+    public async Task<ActionResult> GetTemplateProject(string template, string? options = null, string packaging = DefaultPackaging)
     {
         ArgumentNullException.ThrowIfNull(template);
 
@@ -222,7 +222,7 @@ public sealed partial class NewController : ControllerBase
                 }
             }
 
-            if (!_packagers.TryGetValue(packaging, out IPackager packager))
+            if (!_packagers.TryGetValue(packaging, out IPackager? packager))
             {
                 return BadRequest($"Unknown or unsupported packaging '{packaging}'.");
             }
@@ -316,7 +316,7 @@ public sealed partial class NewController : ControllerBase
         int tagsColEnd = tagsColStart + headings[3].Length;
         lines = lines.GetRange(headingIdx + 1, lines.Count - headingIdx - 1);
 
-        var dict = new TemplateDictionary();
+        var dictionary = new TemplateDictionary();
 
         foreach (string line in lines)
         {
@@ -329,10 +329,10 @@ public sealed partial class NewController : ControllerBase
                 Tags = line[tagsColStart..Math.Min(tagsColEnd, line.Length)].Trim()
             };
 
-            dict.Add(template, templateInfo);
+            dictionary.Add(template, templateInfo);
         }
 
-        return dict;
+        return dictionary;
     }
 
     private static ReadOnlySpan<char> StripTextBefore(ReadOnlySpan<char> source, string textToFind, bool keepTextToFind = false)
@@ -375,7 +375,7 @@ public sealed partial class NewController : ControllerBase
     }
 
     [LoggerMessage(LogLevel.Information, "New: template={Template}, options={Options}, packaging={Packaging}")]
-    partial void LogNewTemplate(string template, string options, string packaging);
+    partial void LogNewTemplate(string template, string? options, string packaging);
 
     [LoggerMessage(LogLevel.Debug, "Generated project in {Elapsed:m:s.fff}")]
     partial void LogProjectGenerated(TimeSpan elapsed);
