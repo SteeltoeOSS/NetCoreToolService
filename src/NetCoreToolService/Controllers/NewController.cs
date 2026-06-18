@@ -4,6 +4,7 @@
 
 using System.Buffers;
 using System.Diagnostics;
+using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Steeltoe.NetCoreToolService.Models;
@@ -24,6 +25,7 @@ public sealed partial class NewController : ControllerBase
 {
     private const string DefaultOutput = "Sample";
     private const string DefaultPackaging = "zip";
+    private const string SensitiveEndpointUnavailableMessage = "Set 'EnableSensitiveEndpoints' to 'true' in configuration to enable this endpoint.";
 
     private static readonly string[] LineBreaks =
     [
@@ -35,6 +37,7 @@ public sealed partial class NewController : ControllerBase
     private static readonly SearchValues<string> LineBreakValues = SearchValues.Create(LineBreaks, StringComparison.Ordinal);
 
     private readonly ICommandExecutor _commandExecutor;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<NewController> _logger;
 
     private readonly Dictionary<string, IPackager> _packagers = new()
@@ -48,15 +51,20 @@ public sealed partial class NewController : ControllerBase
     /// <param name="commandExecutor">
     /// Injected command.
     /// </param>
+    /// <param name="configuration">
+    /// The app configuration.
+    /// </param>
     /// <param name="logger">
     /// Injected logger.
     /// </param>
-    public NewController(ICommandExecutor commandExecutor, ILogger<NewController> logger)
+    public NewController(ICommandExecutor commandExecutor, IConfiguration configuration, ILogger<NewController> logger)
     {
         ArgumentNullException.ThrowIfNull(commandExecutor);
+        ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(logger);
 
         _commandExecutor = commandExecutor;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -86,6 +94,11 @@ public sealed partial class NewController : ControllerBase
     {
         ArgumentNullException.ThrowIfNull(nuGetId);
 
+        if (!AreSensitiveEndpointsEnabled())
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, SensitiveEndpointUnavailableMessage);
+        }
+
         await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}", null, -1);
         TemplateDictionary oldTemplates = await GetTemplateDictionaryAsync();
         CommandResult installCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new install {nuGetId}", null, -1);
@@ -108,6 +121,11 @@ public sealed partial class NewController : ControllerBase
         return CreatedAtAction(nameof(InstallTemplates), newTemplates);
     }
 
+    private bool AreSensitiveEndpointsEnabled()
+    {
+        return _configuration.GetValue("EnableSensitiveEndpoints", false);
+    }
+
     /// <summary>
     /// Uninstalls the Net Core Tool templates for the specified NuGet ID.
     /// </summary>
@@ -121,6 +139,11 @@ public sealed partial class NewController : ControllerBase
     public async Task<ActionResult> UninstallTemplates(string nuGetId)
     {
         ArgumentNullException.ThrowIfNull(nuGetId);
+
+        if (!AreSensitiveEndpointsEnabled())
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, SensitiveEndpointUnavailableMessage);
+        }
 
         TemplateDictionary oldTemplates = await GetTemplateDictionaryAsync();
         CommandResult uninstallCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}", null, -1);

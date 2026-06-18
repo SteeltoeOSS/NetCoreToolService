@@ -3,9 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System.IO.Compression;
+using System.Net;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Steeltoe.NetCoreToolService.Controllers;
@@ -17,6 +19,14 @@ namespace Steeltoe.NetCoreToolService.Test.Controllers;
 
 public sealed class NewControllerTest
 {
+    private static readonly IConfiguration EmptyConfiguration = new ConfigurationBuilder().Build();
+
+    private static readonly IConfiguration SensitiveEndpointsEnabledConfiguration = new ConfigurationBuilder().AddInMemoryCollection(
+        new Dictionary<string, string?>
+        {
+            ["EnableSensitiveEndpoints"] = "true"
+        }).Build();
+
     [Fact]
     public async Task GetTemplates_Should_Return_AllTemplates()
     {
@@ -33,7 +43,7 @@ public sealed class NewControllerTest
                 """
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplates();
@@ -50,6 +60,22 @@ public sealed class NewControllerTest
         templates["my-ot"].Name.Should().Be("My Other Template");
         templates["my-ot"].Languages.Should().Be("other-lang");
         templates["my-ot"].Tags.Should().Be("other-tags");
+    }
+
+    [Fact]
+    public async Task InstallTemplates_Is_Disabled_By_Default()
+    {
+        // Arrange
+        var executor = new Mock<ICommandExecutor>();
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.InstallTemplates("My.Templates");
+
+        // Assert
+        var errorResult = Assert.IsType<ObjectResult>(result);
+        errorResult.StatusCode.Should().Be((int)HttpStatusCode.ServiceUnavailable);
+        errorResult.Value.Should().Be("Set 'EnableSensitiveEndpoints' to 'true' in configuration to enable this endpoint.");
     }
 
     [Fact]
@@ -84,7 +110,7 @@ public sealed class NewControllerTest
             Output = string.Empty
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.InstallTemplates("My.Templates");
@@ -99,6 +125,22 @@ public sealed class NewControllerTest
         templates["ont"].Name.Should().Be("Other New Template");
         templates["ont"].Languages.Should().Be("big-talk");
         templates["ont"].Tags.Should().Be("other-stuff");
+    }
+
+    [Fact]
+    public async Task UninstallTemplates_Is_Disabled_By_Default()
+    {
+        // Arrange
+        var executor = new Mock<ICommandExecutor>();
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.UninstallTemplates("My.Templates");
+
+        // Assert
+        var errorResult = Assert.IsType<ObjectResult>(result);
+        errorResult.StatusCode.Should().Be((int)HttpStatusCode.ServiceUnavailable);
+        errorResult.Value.Should().Be("Set 'EnableSensitiveEndpoints' to 'true' in configuration to enable this endpoint.");
     }
 
     [Fact]
@@ -133,7 +175,7 @@ public sealed class NewControllerTest
             Output = string.Empty
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.UninstallTemplates("My.Templates");
@@ -162,7 +204,7 @@ public sealed class NewControllerTest
             Output = "Some helpful tips for you"
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateHelp("my-template");
@@ -188,7 +230,7 @@ public sealed class NewControllerTest
             Error = string.Empty
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template");
@@ -212,7 +254,7 @@ public sealed class NewControllerTest
             Error = string.Empty
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template");
@@ -238,7 +280,7 @@ public sealed class NewControllerTest
             Error = string.Empty
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template", "output=Joe");
@@ -263,7 +305,7 @@ public sealed class NewControllerTest
             Error = string.Empty
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template", packaging: "zip");
@@ -298,7 +340,7 @@ public sealed class NewControllerTest
                 """
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.InstallTemplates("No.Such.Template");
@@ -326,7 +368,7 @@ public sealed class NewControllerTest
             Output = "Could not find something to uninstall called 'My.Templates'."
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.UninstallTemplates("My.Templates");
@@ -348,7 +390,7 @@ public sealed class NewControllerTest
             Error = "No templates found matching: 'no-such-template'."
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateHelp("no-such-template");
@@ -371,7 +413,7 @@ public sealed class NewControllerTest
                 Error = "No templates found matching: 'no-such-template'."
             });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("no-such-template");
@@ -398,7 +440,7 @@ public sealed class NewControllerTest
                     """
             });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template", "unknown-switch");
@@ -425,7 +467,7 @@ public sealed class NewControllerTest
                     """
             });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template", "unknown-switch");
@@ -453,7 +495,7 @@ public sealed class NewControllerTest
                     """
             });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template", "my-option=unknown");
@@ -481,7 +523,7 @@ public sealed class NewControllerTest
                     """
             });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template", packaging: "acme-packaging");
@@ -504,7 +546,7 @@ public sealed class NewControllerTest
             Error = "Something bad happened."
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template");
@@ -528,7 +570,7 @@ public sealed class NewControllerTest
             Error = string.Empty
         });
 
-        var controller = new NewController(executor.Object, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template");
