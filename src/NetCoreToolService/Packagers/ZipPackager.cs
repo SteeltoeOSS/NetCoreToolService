@@ -62,7 +62,8 @@ public sealed class ZipPackager : IPackager
 
         if (path != rootPath)
         {
-            ZipArchiveEntry entry = archive.CreateEntry($"{Path.GetRelativePath(rootPath, path)}{Path.DirectorySeparatorChar}");
+            string pathInZip = NormalizePath($"{Path.GetRelativePath(rootPath, path)}{Path.DirectorySeparatorChar}");
+            ZipArchiveEntry entry = archive.CreateEntry(pathInZip, Level);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -72,7 +73,8 @@ public sealed class ZipPackager : IPackager
 
         foreach (FileInfo file in directory.GetFiles())
         {
-            ZipArchiveEntry entry = archive.CreateEntry(Path.GetRelativePath(rootPath, file.FullName), Level);
+            string pathInZip = NormalizePath(Path.GetRelativePath(rootPath, file.FullName));
+            ZipArchiveEntry entry = archive.CreateEntry(pathInZip, Level);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -88,5 +90,10 @@ public sealed class ZipPackager : IPackager
         {
             AddPathToArchive(archive, rootPath, subDirectory.FullName);
         }
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return path.Replace('\\', '/');
     }
 }
