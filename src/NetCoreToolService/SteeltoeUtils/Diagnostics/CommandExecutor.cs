@@ -73,7 +73,7 @@ public sealed partial class CommandExecutor : ICommandExecutor
                 throw new CommandException($"'{command}' failed to start; no details available");
             }
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not CommandException)
         {
             LogStartThrown(commandId, exception.Message);
             throw new CommandException($"'{command}' failed to start: {exception.Message}", exception);
