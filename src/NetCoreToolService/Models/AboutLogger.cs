@@ -6,6 +6,6 @@ namespace Steeltoe.NetCoreToolService.Models;
 
 internal static partial class AboutLogger
 {
-    [LoggerMessage(LogLevel.Debug, "{Program}, version {Version} [{Commit}]")]
+    [LoggerMessage(LogLevel.Information, "{Program}, version {Version} [{Commit}]")]
     public static partial void LogVersion(ILogger logger, string program, string version, string commit);
 }
