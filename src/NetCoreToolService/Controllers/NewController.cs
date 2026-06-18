@@ -281,14 +281,20 @@ public sealed partial class NewController : ControllerBase
 
                         if (keySpan.Length > 0 && valueSpan.Length > 0)
                         {
-                            ReadOnlySpan<char> escapedValueSpan = valueSpan.Contains(' ') ? $"\"{valueSpan}\"" : valueSpan;
-
                             if (keySpan.Equals("output", StringComparison.Ordinal))
                             {
-                                outputName = escapedValueSpan.ToString();
+                                int lastPathSeparatorIndex = valueSpan.LastIndexOfAny(":\\/");
+
+                                if (lastPathSeparatorIndex != -1)
+                                {
+                                    valueSpan = valueSpan[(lastPathSeparatorIndex + 1)..];
+                                }
+
+                                outputName = valueSpan.ToString();
                             }
                             else
                             {
+                                ReadOnlySpan<char> escapedValueSpan = valueSpan.Contains(' ') ? $"\"{valueSpan}\"" : valueSpan;
                                 optionList.Add($"--{keySpan}={escapedValueSpan}");
                             }
                         }
@@ -301,7 +307,7 @@ public sealed partial class NewController : ControllerBase
             }
         }
 
-        optionList.Insert(0, $"--output={outputName}");
+        optionList.Insert(0, $"--output=\"{outputName}\"");
         return optionList;
     }
 

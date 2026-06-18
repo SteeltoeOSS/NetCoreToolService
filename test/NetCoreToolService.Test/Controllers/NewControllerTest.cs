@@ -339,6 +339,72 @@ public sealed class NewControllerTest
     }
 
     [Fact]
+    public async Task GetTemplateProject_Can_Specify_Output_With_Whitespace()
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.GetTemplateProject("classlib", "output= Joe's Demo Project ");
+
+        // Assert
+        FileContentResult fileResult = result.Should().BeOfType<FileContentResult>().Subject;
+        fileResult.ContentType.Should().Be("application/zip");
+        fileResult.FileDownloadName.Should().Be("Joe's Demo Project.zip");
+        fileResult.FileContents.Should().HaveCountGreaterThan(0);
+
+        using var stream = new MemoryStream(fileResult.FileContents);
+        await using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        archive.Entries.Should().NotBeEmpty();
+        archive.Entries.Should().ContainSingle(entry => entry.Name == "Joe's Demo Project.csproj");
+    }
+
+    [Fact]
+    public async Task GetTemplateProject_Strips_Unix_Path_From_Output()
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.GetTemplateProject("classlib", "output=/tmp/Joe");
+
+        // Assert
+        FileContentResult fileResult = result.Should().BeOfType<FileContentResult>().Subject;
+        fileResult.ContentType.Should().Be("application/zip");
+        fileResult.FileDownloadName.Should().Be("Joe.zip");
+        fileResult.FileContents.Should().HaveCountGreaterThan(0);
+
+        using var stream = new MemoryStream(fileResult.FileContents);
+        await using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        archive.Entries.Should().NotBeEmpty();
+        archive.Entries.Should().ContainSingle(entry => entry.Name == "Joe.csproj");
+    }
+
+    [Fact]
+    public async Task GetTemplateProject_Strips_Windows_Path_From_Output()
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.GetTemplateProject("classlib", @"output=c:\temp\Joe");
+
+        // Assert
+        FileContentResult fileResult = result.Should().BeOfType<FileContentResult>().Subject;
+        fileResult.ContentType.Should().Be("application/zip");
+        fileResult.FileDownloadName.Should().Be("Joe.zip");
+        fileResult.FileContents.Should().HaveCountGreaterThan(0);
+
+        using var stream = new MemoryStream(fileResult.FileContents);
+        await using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        archive.Entries.Should().NotBeEmpty();
+        archive.Entries.Should().ContainSingle(entry => entry.Name == "Joe.csproj");
+    }
+
+    [Fact]
     public async Task GetTemplateProject_UnknownTemplate_Should_Return_NotFound()
     {
         // Arrange
