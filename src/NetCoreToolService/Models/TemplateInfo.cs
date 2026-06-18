@@ -2,13 +2,15 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
+// ReSharper disable NotAccessedPositionalProperty.Global
+
 namespace Steeltoe.NetCoreToolService.Models;
 
 /// <summary>
-/// Contains information about a Net Core Tool template.
+/// Contains information about a project template.
 /// </summary>
 /// <param name="Name">
-/// The name of the template.
+/// The display name of the template.
 /// </param>
 /// <param name="Languages">
 /// The supported languages of the template.
@@ -16,11 +18,4 @@ namespace Steeltoe.NetCoreToolService.Models;
 /// <param name="Tags">
 /// The template tags.
 /// </param>
-public readonly record struct TemplateInfo(string Name, string Languages, string Tags)
-{
-    /// <inheritdoc />
-    public override string ToString()
-    {
-        return $"[name={Name},languages={Languages},tags={Tags}";
-    }
-}
+public readonly record struct TemplateInfo(string Name, string Languages, string Tags);

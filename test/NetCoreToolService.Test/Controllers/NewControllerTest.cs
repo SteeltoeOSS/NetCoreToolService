@@ -28,18 +28,20 @@ public sealed class NewControllerTest
         }).Build();
 
     [Fact]
-    public async Task GetTemplates_Should_Return_AllTemplates()
+    public async Task GetTemplates_Should_Return_All_Templates()
     {
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1)).ReturnsAsync(new CommandResult
+        executor.Setup(c => c.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1)).ReturnsAsync(new CommandResult
         {
-            ExitCode = 0,
             Output = """
-                -------------------  --------  ----------  ----------
-                My Template          myt       lang        tags
-                My Other Template    my-ot     other-lang  other-tags
+                These templates matched your input:
+
+                Template Name   Short Name     Language    Tags
+                --------------  -------------  ----------  --------------
+                API Controller  apicontroller  [C#]        Web/ASP.NET
+                Class Library   classlib       [C#],F#,VB  Common/Library
                 """
         });
 
@@ -49,66 +51,63 @@ public sealed class NewControllerTest
         ActionResult result = await controller.GetTemplates();
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var templates = Assert.IsType<TemplateDictionary>(okResult.Value);
-        templates.Count.Should().Be(2);
-        templates.Keys.Should().Contain("myt");
-        templates["myt"].Name.Should().Be("My Template");
-        templates["myt"].Languages.Should().Be("lang");
-        templates["myt"].Tags.Should().Be("tags");
-        templates.Keys.Should().Contain("my-ot");
-        templates["my-ot"].Name.Should().Be("My Other Template");
-        templates["my-ot"].Languages.Should().Be("other-lang");
-        templates["my-ot"].Tags.Should().Be("other-tags");
+        OkObjectResult okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        TemplateDictionary templates = okResult.Value.Should().BeOfType<TemplateDictionary>().Subject;
+
+        templates.Should().BeEquivalentTo(new TemplateDictionary
+        {
+            ["apicontroller"] = new TemplateInfo("API Controller", "[C#]", "Web/ASP.NET"),
+            ["classlib"] = new TemplateInfo("Class Library", "[C#],F#,VB", "Common/Library")
+        });
     }
 
     [Fact]
     public async Task InstallTemplates_Is_Disabled_By_Default()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.InstallTemplates("My.Templates");
 
         // Assert
-        var errorResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult errorResult = result.Should().BeOfType<ObjectResult>().Subject;
         errorResult.StatusCode.Should().Be((int)HttpStatusCode.ServiceUnavailable);
         errorResult.Value.Should().Be("Set 'EnableSensitiveEndpoints' to 'true' in configuration to enable this endpoint.");
     }
 
     [Fact]
-    public async Task InstallTemplates_Should_Return_InstalledTemplates()
+    public async Task InstallTemplates_Should_Return_Installed_Templates()
     {
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.SetupSequence(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1)).ReturnsAsync(new CommandResult
+        executor.SetupSequence(c => c.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1)).ReturnsAsync(new CommandResult
         {
-            ExitCode = 0,
             Output = """
-                -------------------  --------  ----------  ----------
-                My Template          myt       lang        tags
-                My Other Template    my-ot     other-lang  other-tags
+                These templates matched your input:
+
+                Template Name      Short Name  Language    Tags
+                -----------------  ----------  ----------  ----------
+                My Template        myt         lang        tags
+                My Other Template  my-ot       other-lang  other-tags
                 """
         }).ReturnsAsync(new CommandResult
         {
-            ExitCode = 0,
             Output = """
-                -------------------  --------  ----------  -----------
-                A New Template       ant       smalltalk   new-stuff
-                My Template          myt       lang        tags
-                My Other Template    my-ot     other-lang  other-tags
-                Other New Template   ont       big-talk    other-stuff
+                These templates matched your input:
+
+                Template Name       Short Name  Language    Tags
+                ------------------  ----------  ----------  -----------
+                A New Template      ant         smalltalk   new-stuff
+                My Template         myt         lang        tags
+                My Other Template   my-ot       other-lang  other-tags
+                Other New Template  ont         big-talk    other-stuff
                 """
         });
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new install My.Templates", null, -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = string.Empty
-        });
+        executor.Setup(c => c.ExecuteAsync($"{NewController.ExecutableName} new install My.Templates", null, -1)).ReturnsAsync(default(CommandResult));
 
         var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
 
@@ -116,64 +115,78 @@ public sealed class NewControllerTest
         ActionResult result = await controller.InstallTemplates("My.Templates");
 
         // Assert
-        var createdResult = Assert.IsType<CreatedAtActionResult>(result);
-        var templates = Assert.IsType<TemplateDictionary>(createdResult.Value);
-        templates.Count.Should().Be(2);
-        templates["ant"].Name.Should().Be("A New Template");
-        templates["ant"].Languages.Should().Be("smalltalk");
-        templates["ant"].Tags.Should().Be("new-stuff");
-        templates["ont"].Name.Should().Be("Other New Template");
-        templates["ont"].Languages.Should().Be("big-talk");
-        templates["ont"].Tags.Should().Be("other-stuff");
+        CreatedAtActionResult createdAtResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        TemplateDictionary templates = createdAtResult.Value.Should().BeOfType<TemplateDictionary>().Subject;
+
+        templates.Should().BeEquivalentTo(new TemplateDictionary
+        {
+            ["ant"] = new TemplateInfo("A New Template", "smalltalk", "new-stuff"),
+            ["ont"] = new TemplateInfo("Other New Template", "big-talk", "other-stuff")
+        });
+    }
+
+    [Fact]
+    public async Task InstallTemplates_UnknownNuGetId_Should_Return_BadRequest()
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.InstallTemplates("No.Such.Template");
+
+        // Assert
+        BadRequestObjectResult errorResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        errorResult.Value.Should().Be("The package 'No.Such.Template' does not exist.");
     }
 
     [Fact]
     public async Task UninstallTemplates_Is_Disabled_By_Default()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.UninstallTemplates("My.Templates");
 
         // Assert
-        var errorResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult errorResult = result.Should().BeOfType<ObjectResult>().Subject;
         errorResult.StatusCode.Should().Be((int)HttpStatusCode.ServiceUnavailable);
         errorResult.Value.Should().Be("Set 'EnableSensitiveEndpoints' to 'true' in configuration to enable this endpoint.");
     }
 
     [Fact]
-    public async Task UninstallTemplates_Should_Return_UninstalledTemplates()
+    public async Task UninstallTemplates_Should_Return_Uninstalled_Templates()
     {
         // Arrange
         var executor = new Mock<ICommandExecutor>();
 
-        executor.SetupSequence(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1)).ReturnsAsync(new CommandResult
+        executor.SetupSequence(c => c.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1)).ReturnsAsync(new CommandResult
         {
-            ExitCode = 0,
             Output = """
-                -------------------  --------  ----------  -----------
-                A New Template       ant       smalltalk   new-stuff
-                My Template          myt       lang        tags
-                My Other Template    my-ot     other-lang  other-tags
-                Other New Template   ont       big-talk    other-stuff
+                These templates matched your input:
+
+                Template Name       Short Name  Language    Tags
+                ------------------  ----------  ----------  -----------
+                A New Template      ant         smalltalk   new-stuff
+                My Template         myt         lang        tags
+                My Other Template   my-ot       other-lang  other-tags
+                Other New Template  ont         big-talk    other-stuff
                 """
         }).ReturnsAsync(new CommandResult
         {
-            ExitCode = 0,
             Output = """
-                -------------------  --------  ----------  ----------
-                My Template          myt       lang        tags
-                My Other Template    my-ot     other-lang  other-tags
+                These templates matched your input:
+
+                Template Name      Short Name  Language    Tags
+                -----------------  ----------  ----------  ----------
+                My Template        myt         lang        tags
+                My Other Template  my-ot       other-lang  other-tags
                 """
         });
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new uninstall My.Templates", null, -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = string.Empty
-        });
+        executor.Setup(c => c.ExecuteAsync($"{NewController.ExecutableName} new uninstall My.Templates", null, -1)).ReturnsAsync(default(CommandResult));
 
         var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
 
@@ -181,356 +194,208 @@ public sealed class NewControllerTest
         ActionResult result = await controller.UninstallTemplates("My.Templates");
 
         // Assert
-        var ok = Assert.IsType<OkObjectResult>(result);
-        var templates = Assert.IsType<TemplateDictionary>(ok.Value);
-        templates.Count.Should().Be(2);
-        templates["ant"].Name.Should().Be("A New Template");
-        templates["ant"].Languages.Should().Be("smalltalk");
-        templates["ant"].Tags.Should().Be("new-stuff");
-        templates["ont"].Name.Should().Be("Other New Template");
-        templates["ont"].Languages.Should().Be("big-talk");
-        templates["ont"].Tags.Should().Be("other-stuff");
+        OkObjectResult okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        TemplateDictionary templates = okResult.Value.Should().BeOfType<TemplateDictionary>().Subject;
+
+        templates.Should().BeEquivalentTo(new TemplateDictionary
+        {
+            ["ant"] = new TemplateInfo("A New Template", "smalltalk", "new-stuff"),
+            ["ont"] = new TemplateInfo("Other New Template", "big-talk", "other-stuff")
+        });
+    }
+
+    [Fact]
+    public async Task UninstallTemplates_UnknownNuGetId_Should_Return_NotFound()
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.UninstallTemplates("My.Templates");
+
+        // Assert
+        NotFoundObjectResult notFoundResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFoundResult.Value.Should().Be("No templates from package 'My.Templates' are installed.");
     }
 
     [Fact]
     public async Task GetTemplateHelp_Should_Return_Help()
     {
         // Arrange
+        const string helpText = """
+            Class Library (C#)
+            Author: Microsoft
+            Description: A project for creating a class library that targets .NET or .NET Standard
+
+            Usage:
+              dotnet new classlib [options] [template options]
+
+            Options:
+              -n, --name <name>       The name for the output being created. If no name is specified, the name of the output directory is used.
+              -o, --output <output>   Location to place the generated output.
+              --dry-run               Displays a summary of what would happen if the given command line were run if it would result in a template creation. [default: False]
+              --force                 Forces content to be generated even if it would change existing files. [default: False]
+              --no-update-check       Disables checking for the template package updates when instantiating a template. [default: False]
+              --project <project>     The project that should be used for context evaluation.
+              -lang, --language <C#>  Specifies the template language to instantiate.
+              --type <project>        Specifies the template type to instantiate.
+
+            Template options:
+              -f, --framework <net10.0|net6.0|net8.0|net9.0|netstandard2.0|netstandard2.1>  The target framework for the project.
+                                                                                            Type: choice
+                                                                                              net10.0         Target net10.0
+                                                                                              netstandard2.1  Target netstandard2.1
+                                                                                              netstandard2.0  Target netstandard2.0
+                                                                                              net9.0          Target net9.0
+                                                                                              net8.0          Target net8.0
+                                                                                              net6.0          Target net6.0
+                                                                                            Default: net10.0
+              --langVersion <langVersion>                                                   Sets the LangVersion property in the created project file
+                                                                                            Type: text
+              --no-restore                                                                  If specified, skips the automatic restore of the project on create.
+                                                                                            Type: bool
+                                                                                            Default: false
+
+            To see help for other template languages (F#, VB), use --language option:
+               dotnet new classlib -h --language F#
+            """;
+
         var executor = new Mock<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --help", null, -1)).ReturnsAsync(new CommandResult
+        executor.Setup(c => c.ExecuteAsync($"{NewController.ExecutableName} new classlib --help", null, -1)).ReturnsAsync(new CommandResult
         {
-            ExitCode = 0,
-            Output = "Some helpful tips for you"
+            Output = helpText
         });
 
         var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateHelp("my-template");
+        ActionResult result = await controller.GetTemplateHelp("classlib");
 
         // Assert
-        var ok = Assert.IsType<OkObjectResult>(result);
-        string help = Assert.IsType<string>(ok.Value);
-        help.Should().Be("Some helpful tips for you");
-    }
-
-    [Fact]
-    public async Task GetTemplateProject_Should_Return_ProjectPackage()
-    {
-        // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = """
-                The template "my-template" was created successfully.
-                """,
-            Error = string.Empty
-        });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
-
-        // Act
-        ActionResult result = await controller.GetTemplateProject("my-template");
-
-        // Assert
-        Assert.IsType<FileContentResult>(result);
-    }
-
-    [Fact]
-    public async Task GetTemplateProject_Should_Use_Defaults()
-    {
-        // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = """
-                The template "my-template" was created successfully.
-                """,
-            Error = string.Empty
-        });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
-
-        // Act
-        ActionResult result = await controller.GetTemplateProject("my-template");
-
-        // Assert
-        var file = Assert.IsType<FileContentResult>(result);
-        file.ContentType.Should().Be("application/zip");
-        file.FileDownloadName.Should().Be("Sample.zip");
-    }
-
-    [Fact]
-    public async Task GetTemplateProject_Can_Specify_Output()
-    {
-        // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Joe", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = """
-                The template "my-template" was created successfully.
-                """,
-            Error = string.Empty
-        });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
-
-        // Act
-        ActionResult result = await controller.GetTemplateProject("my-template", "output=Joe");
-
-        // Assert
-        var file = Assert.IsType<FileContentResult>(result);
-        file.FileDownloadName.Should().StartWith("Joe.");
-    }
-
-    [Fact]
-    public async Task GetTemplateProject_Can_Specify_ZipPackaging()
-    {
-        // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = """
-                The template "my-template" was created successfully.
-                """,
-            Error = string.Empty
-        });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
-
-        // Act
-        ActionResult result = await controller.GetTemplateProject("my-template", packaging: "zip");
-
-        // Assert
-        var file = Assert.IsType<FileContentResult>(result);
-        _ = new ZipArchive(new MemoryStream(file.FileContents));
-    }
-
-    [Fact]
-    public async Task InstallTemplates_UnknownNuGet_Should_Return_BadRequest()
-    {
-        // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = """
-                -------------------  --------  ----------  ----------
-                My Template          myt       lang        tags
-                My Other Template    my-ot     other-lang  other-tags
-                """
-        });
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new install No.Such.Template", null, -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 2,
-            Output = """
-                ... error NU1101: Unable to find package No.Such.Template. No packages exist with this id in source(s): myget.org, nuget.org
-                Failed to restore ...
-                """
-        });
-
-        var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
-
-        // Act
-        ActionResult result = await controller.InstallTemplates("No.Such.Template");
-
-        // Assert
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        badRequest.Value.Should().Be("Unable to find package No.Such.Template. No packages exist with this id in source(s): myget.org, nuget.org");
-    }
-
-    [Fact]
-    public async Task UninstallTemplates_UnknownNuGet_Should_Return_NotFound()
-    {
-        // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new list", null, -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = "-------------------  --------  ---------  ---------"
-        });
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new uninstall My.Templates", null, -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 0,
-            Output = "Could not find something to uninstall called 'My.Templates'."
-        });
-
-        var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
-
-        // Act
-        ActionResult result = await controller.UninstallTemplates("My.Templates");
-
-        // Assert
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("No templates with NuGet ID 'My.Templates' installed.");
+        OkObjectResult okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        string message = okResult.Value.Should().BeOfType<string>().Subject;
+        message.Should().Be(helpText);
     }
 
     [Fact]
     public async Task GetTemplateHelp_UnknownTemplate_Should_Return_NotFound()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new no-such-template --help", null, -1)).ReturnsAsync(new CommandResult
-        {
-            ExitCode = 6,
-            Error = "No templates found matching: 'no-such-template'."
-        });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateHelp("no-such-template");
 
         // Assert
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("No templates found matching: 'no-such-template'.");
+        NotFoundObjectResult notFoundResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFoundResult.Value.Should().Be("Template 'no-such-template' not found.");
+    }
+
+    [Fact]
+    public async Task GetTemplateProject_Should_Return_Project_Package()
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.GetTemplateProject("classlib");
+
+        // Assert
+        FileContentResult fileResult = result.Should().BeOfType<FileContentResult>().Subject;
+        fileResult.ContentType.Should().Be("application/zip");
+        fileResult.FileDownloadName.Should().Be("Sample.zip");
+        fileResult.FileContents.Should().HaveCountGreaterThan(0);
+
+        using var stream = new MemoryStream(fileResult.FileContents);
+        await using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        archive.Entries.Should().NotBeEmpty();
+        archive.Entries.Should().ContainSingle(entry => entry.Name == "Sample.csproj");
+    }
+
+    [Fact]
+    public async Task GetTemplateProject_Can_Specify_Output()
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.GetTemplateProject("classlib", "output=Joe");
+
+        // Assert
+        FileContentResult fileResult = result.Should().BeOfType<FileContentResult>().Subject;
+        fileResult.ContentType.Should().Be("application/zip");
+        fileResult.FileDownloadName.Should().Be("Joe.zip");
+        fileResult.FileContents.Should().HaveCountGreaterThan(0);
+
+        using var stream = new MemoryStream(fileResult.FileContents);
+        await using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        archive.Entries.Should().NotBeEmpty();
+        archive.Entries.Should().ContainSingle(entry => entry.Name == "Joe.csproj");
     }
 
     [Fact]
     public async Task GetTemplateProject_UnknownTemplate_Should_Return_NotFound()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new no-such-template --output=Sample", It.IsAny<string>(), -1)).ReturnsAsync(
-            new CommandResult
-            {
-                ExitCode = 14,
-                Error = "No templates found matching: 'no-such-template'."
-            });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("no-such-template");
 
         // Assert
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("Template 'no-such-template' not found.");
+        NotFoundObjectResult notFoundResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFoundResult.Value.Should().Be("Template 'no-such-template' not found.");
     }
 
     [Fact]
-    public async Task GetTemplateProject_UnknownSwitch1_Should_Return_NotFound()
+    public async Task GetTemplateProject_UnknownSwitches_Should_Return_NotFound()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample --unknown-switch", It.IsAny<string>(), -1)).ReturnsAsync(
-            new CommandResult
-            {
-                ExitCode = 5,
-                Error = """
-                    Invalid input switch:
-                      --unknown-switch
-                    For a list of valid options, run 'dotnet new webapi --help'.
-                    """
-            });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("my-template", "unknown-switch");
+        ActionResult result = await controller.GetTemplateProject("classlib", "unknown-switch, other-switch");
 
         // Assert
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("Switch 'unknown-switch' not found.");
+        NotFoundObjectResult notFoundResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFoundResult.Value.Should().Be("'--unknown-switch' is not a valid option. '--other-switch' is not a valid option.");
     }
 
     [Fact]
-    public async Task GetTemplateProject_UnknownSwitch2_Should_Return_NotFound()
+    public async Task GetTemplateProject_UnknownParameters_Should_Return_NotFound()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample --unknown-switch", It.IsAny<string>(), -1)).ReturnsAsync(
-            new CommandResult
-            {
-                ExitCode = 5,
-                Error = """
-                    Error: Invalid option(s):
-                    --unknown-switch
-                       '--unknown-switch' is not a valid option
-                    """
-            });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
-        ActionResult result = await controller.GetTemplateProject("my-template", "unknown-switch");
+        ActionResult result = await controller.GetTemplateProject("classlib", "language=unknown, type=other");
 
         // Assert
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("Switch 'unknown-switch' not found.");
+        NotFoundObjectResult notFoundResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFoundResult.Value.Should().Be("Allowed values for '--language' option are: 'C#', 'F#', 'VB'. Allowed values for '--type' option are: 'project'.");
     }
 
     [Fact]
-    public async Task GetTemplateProject_UnknownParameter_Should_Return_NotFound()
+    public async Task GetTemplateProject_UnknownPackagingFormat_Should_Return_BadRequest()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample --my-option=unknown", It.IsAny<string>(), -1)).ReturnsAsync(
-            new CommandResult
-            {
-                ExitCode = 0,
-                Output = string.Empty,
-                Error = """
-                    Error: Invalid parameter(s):
-                    --my-option unknown
-                        'unknown' is not a valid value for --my-option
-                    """
-            });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
-
-        // Act
-        ActionResult result = await controller.GetTemplateProject("my-template", "my-option=unknown");
-
-        // Assert
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        notFound.Value.Should().Be("Option 'my-option' parameter 'unknown' not found.");
-    }
-
-    [Fact]
-    public async Task GetTemplateProject_UnknownPackaging_Should_Return_BadRequest()
-    {
-        // Arrange
-        var executor = new Mock<ICommandExecutor>();
-
-        executor.Setup(c => c.ExecuteAsync($"{NetCoreTool.Command} new my-template --output=Sample --my-option=unknown", It.IsAny<string>(), -1)).ReturnsAsync(
-            new CommandResult
-            {
-                ExitCode = 0,
-                Output = string.Empty,
-                Error = """
-                    Error: Invalid parameter(s):
-                    --my-option unknown
-                        'unknown' is not a valid value for --my-option
-                    """
-            });
-
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template", packaging: "acme-packaging");
 
         // Assert
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        badRequest.Value.Should().Be("Unknown or unsupported packaging 'acme-packaging'.");
+        badRequest.Value.Should().Be("Unknown or unsupported packaging format 'acme-packaging'.");
     }
 
     [Fact]
@@ -542,7 +407,6 @@ public sealed class NewControllerTest
         executor.Setup(c => c.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
         {
             ExitCode = 1,
-            Output = string.Empty,
             Error = "Something bad happened."
         });
 
@@ -552,9 +416,9 @@ public sealed class NewControllerTest
         ActionResult result = await controller.GetTemplateProject("my-template");
 
         // Assert
-        var internalServerError = Assert.IsType<ObjectResult>(result);
-        internalServerError.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
-        internalServerError.Value.Should().Be("Something bad happened.");
+        ObjectResult errorResult = result.Should().BeOfType<ObjectResult>().Subject;
+        errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        errorResult.Value.Should().Be("Something bad happened.");
     }
 
     [Fact]
@@ -565,7 +429,6 @@ public sealed class NewControllerTest
 
         executor.Setup(c => c.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
         {
-            ExitCode = 0,
             Output = "Unexpected output.",
             Error = string.Empty
         });
@@ -576,8 +439,8 @@ public sealed class NewControllerTest
         ActionResult result = await controller.GetTemplateProject("my-template");
 
         // Assert
-        var internalServerError = Assert.IsType<ObjectResult>(result);
-        internalServerError.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
-        internalServerError.Value.Should().Be("Unexpected output.");
+        ObjectResult errorResult = result.Should().BeOfType<ObjectResult>().Subject;
+        errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        errorResult.Value.Should().Be("Unexpected output.");
     }
 }
