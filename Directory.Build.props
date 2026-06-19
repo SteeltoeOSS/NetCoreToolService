@@ -11,6 +11,7 @@
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
     <IsPackable>false</IsPackable>
+    <VersionPrefix>1.1.0</VersionPrefix>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -47,7 +48,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nerdbank.GitVersioning" Version="$(NerdbankVersion)" PrivateAssets="All" />
     <PackageReference Include="SonarAnalyzer.CSharp" Version="$(SonarAnalyzerVersion)" PrivateAssets="All" />
     <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopVersion)" PrivateAssets="All" />
   </ItemGroup>
