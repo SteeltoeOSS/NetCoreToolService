@@ -1,7 +1,5 @@
 services:
   net-core-tool-service:
     build: .
-    environment:
-      DOTNET_ENVIRONMENT: Docker
     ports:
       - "1922:8080"

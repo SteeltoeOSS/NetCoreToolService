@@ -1,4 +1,3 @@
-
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /source
 COPY . .
@@ -15,5 +14,6 @@ COPY --from=build /srv .
 COPY install-template.sh /srv/install-template.sh
 RUN chmod +x /srv/install-template.sh
 RUN /srv/install-template.sh
+ENV DOTNET_ENVIRONMENT=Docker
 ENV HTTP_PORTS=8080
 ENTRYPOINT ["dotnet", "Steeltoe.NetCoreToolService.dll"]
