@@ -2,112 +2,98 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 
-namespace Steeltoe.NetCoreToolService.Packagers
+namespace Steeltoe.NetCoreToolService.Packagers;
+
+/// <summary>
+/// An <see cref="IPackager" /> implementation using the ZIP archive file format.
+/// </summary>
+public sealed class ZipPackager : IPackager
 {
+    /* ----------------------------------------------------------------- *
+     * Fix UNIX permissions in Zip archive extraction                    *
+     *                                             Owner                 *
+     *                                                 Group             *
+     *                                                     Other         *
+     *                                             r w r   r             *
+     * ----------------------------------------------------------------- */
+    private const int UnixFilePermissions = 0b_0000_0001_1010_0100_0000_0000_0000_0000;
+    private const int UnixDirectoryPermissions = 0b_0000_0001_1110_1101_0000_0000_0000_0000;
+
+    private const CompressionLevel Level = CompressionLevel.SmallestSize;
+
     /// <summary>
-    /// An <see cref="IPackager"/> implementation using the ZIP archive file format.
+    /// Gets the name of the ZipArchiver ("zip").
     /// </summary>
-    public class ZipPackager : IPackager
+    public string Name => "zip";
+
+    /// <summary>
+    /// Gets the file extension for the ZipArchiver (".zip").
+    /// </summary>
+    public string FileExtension => ".zip";
+
+    /// <summary>
+    /// Gets the MIME type for the ZipArchiver ("application/zip").
+    /// </summary>
+    public string MimeType => "application/zip";
+
+    /// <inheritdoc />
+    public byte[] ToBytes(string path)
     {
-        /* ----------------------------------------------------------------- *
-         * fields                                                             *
-         * ----------------------------------------------------------------- */
+        ArgumentNullException.ThrowIfNull(path);
 
-        /* ----------------------------------------------------------------- *
-         * Fix UNIX permissions in Zip archive extraction                    *
-         *                                             Owner                 *
-         *                                                 Group             *
-         *                                                     Other         *
-         *                                             r w r   r             *
-         * ----------------------------------------------------------------- */
-        private const int UnixFilePermissions = 0b_0000_0001_1010_0100_0000_0000_0000_0000;
-        private const int UnixDirectoryPermissions = 0b_0000_0001_1110_1101_0000_0000_0000_0000;
+        using var buffer = new MemoryStream();
 
-        private readonly CompressionLevel _compression;
-
-        /* ----------------------------------------------------------------- *
-         * constructors                                                      *
-         * ----------------------------------------------------------------- */
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ZipPackager"/> class.
-        /// </summary>
-        /// <param name="compression">Compression level default <see cref="CompressionLevel.Fastest"/>.</param>
-        public ZipPackager(CompressionLevel compression = CompressionLevel.Fastest)
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true))
         {
-            _compression = compression;
+            AddPathToArchive(archive, path, null);
         }
 
-        /* ----------------------------------------------------------------- *
-         * properties                                                        *
-         * ----------------------------------------------------------------- */
+        buffer.Seek(0, SeekOrigin.Begin);
+        return buffer.ToArray();
+    }
 
-        /// <summary>
-        /// Gets the name of the ZipArchiver ("zip").
-        /// </summary>
-        public string Name => "zip";
+    private static void AddPathToArchive(ZipArchive archive, string rootPath, string? path)
+    {
+        path ??= rootPath;
+        var directory = new DirectoryInfo(path);
 
-        /// <summary>
-        /// Gets the file extension for the ZipArchiver (".zip").
-        /// </summary>
-        public string FileExtension => ".zip";
-
-        /// <summary>
-        /// Gets the MIME type for the ZipArchiver ("application/zip").
-        /// </summary>
-        public string MimeType => "application/zip";
-
-        /* ----------------------------------------------------------------- *
-         * methods                                                           *
-         * ----------------------------------------------------------------- */
-
-        /// <inheritdoc/>
-        public byte[] ToBytes(string path)
+        if (path != rootPath)
         {
-            using var buffer = new MemoryStream();
-            using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true))
-            {
-                AddPathToArchive(archive, path);
-            }
+            string pathInZip = NormalizePath($"{Path.GetRelativePath(rootPath, path)}{Path.DirectorySeparatorChar}");
+            ZipArchiveEntry entry = archive.CreateEntry(pathInZip, Level);
 
-            buffer.Seek(0, SeekOrigin.Begin);
-            return buffer.ToArray();
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                entry.ExternalAttributes = UnixDirectoryPermissions;
+            }
         }
 
-        private void AddPathToArchive(ZipArchive archive, string rootPath, string path = null)
+        foreach (FileInfo file in directory.GetFiles())
         {
-            path ??= rootPath;
-            var directory = new DirectoryInfo(path);
-            if (path != rootPath)
+            string pathInZip = NormalizePath(Path.GetRelativePath(rootPath, file.FullName));
+            ZipArchiveEntry entry = archive.CreateEntry(pathInZip, Level);
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var entry = archive.CreateEntry($"{Path.GetRelativePath(rootPath, path)}{Path.DirectorySeparatorChar}");
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    entry.ExternalAttributes = UnixDirectoryPermissions;
-                }
+                entry.ExternalAttributes = UnixFilePermissions;
             }
 
-            foreach (var file in directory.GetFiles())
-            {
-                var entry = archive.CreateEntry(Path.GetRelativePath(rootPath, file.FullName), _compression);
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    entry.ExternalAttributes = UnixFilePermissions;
-                }
-
-                using var fileStream = File.Open(file.FullName, FileMode.Open);
-                using var entryStream = entry.Open();
-                fileStream.CopyTo(entryStream);
-            }
-
-            foreach (var subDirectory in directory.GetDirectories())
-            {
-                AddPathToArchive(archive, rootPath, subDirectory.FullName);
-            }
+            using FileStream fileStream = File.Open(file.FullName, FileMode.Open);
+            using Stream entryStream = entry.Open();
+            fileStream.CopyTo(entryStream);
         }
+
+        foreach (DirectoryInfo subDirectory in directory.GetDirectories())
+        {
+            AddPathToArchive(archive, rootPath, subDirectory.FullName);
+        }
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return path.Replace('\\', '/');
     }
 }

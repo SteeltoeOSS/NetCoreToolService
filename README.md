@@ -1,6 +1,6 @@
 # Steeltoe NetCoreToolService
 
-[![Build Status](https://dev.azure.com/SteeltoeOSS/Steeltoe/_apis/build/status/Initializr/SteeltoeOSS.NetCoreToolService?branchName=main)](https://dev.azure.com/SteeltoeOSS/Steeltoe/_build/latest?definitionId=45&branchName=main)
+[![Build Status](https://github.com/SteeltoeOSS/NetCoreToolService/actions/workflows/build-and-stage.yml/badge.svg?branch=main)](https://github.com/SteeltoeOSS/NetCoreToolService/actions/workflows/build-and-stage.yml?query=branch%3Amain)
 
 ## Generate Kubernetes Manifest
 

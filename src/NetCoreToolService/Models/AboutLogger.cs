@@ -4,7 +4,8 @@
 
 namespace Steeltoe.NetCoreToolService.Models;
 
-/// <summary>
-/// A convenience dictionary for template information.
-/// </summary>
-public sealed class TemplateDictionary : Dictionary<string, TemplateInfo>;
+internal static partial class AboutLogger
+{
+    [LoggerMessage(LogLevel.Information, "{Program}, version {Version} [{Commit}]")]
+    public static partial void LogVersion(ILogger logger, string program, string version, string commit);
+}

@@ -2,30 +2,50 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-namespace Steeltoe.NetCoreToolService.Models
+using System.Reflection;
+
+namespace Steeltoe.NetCoreToolService.Models;
+
+/// <summary>
+/// Application information, such as version.
+/// </summary>
+/// <param name="Name">
+/// The application name.
+/// </param>
+/// <param name="Version">
+/// The application version.
+/// </param>
+/// <param name="Commit">
+/// The application build source control commit ID.
+/// </param>
+internal readonly record struct About(string Name, string Version, string Commit)
 {
-    /// <summary>
-    /// Application information, such as version.
-    /// </summary>
-    public sealed class About
+    public static void LogCurrent(ILogger<About> logger)
     {
-        /* ----------------------------------------------------------------- *
-         * properties                                                        *
-         * ----------------------------------------------------------------- */
+        About about = GetCurrent();
+        AboutLogger.LogVersion(logger, about.Name, about.Version, about.Commit);
+    }
 
-        /// <summary>
-        /// Gets or sets the application name.
-        /// </summary>
-        public string Name { get; set; }
+    private static About GetCurrent()
+    {
+        var versionAttribute = typeof(About).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        string[] fields = versionAttribute?.InformationalVersion.Split('+') ?? ["unknown"];
 
-        /// <summary>
-        /// Gets or sets the application version.
-        /// </summary>
-        public string Version { get; set; }
+        fields = fields.Length switch
+        {
+            1 =>
+            [
+                fields[0],
+                "unknown"
+            ],
+            _ => fields
+        };
 
-        /// <summary>
-        /// Gets or sets the application build source control commit ID.
-        /// </summary>
-        public string Commit { get; set; }
+        return new About
+        {
+            Name = typeof(About).Namespace ?? "unknown",
+            Version = fields[0],
+            Commit = fields[1]
+        };
     }
 }

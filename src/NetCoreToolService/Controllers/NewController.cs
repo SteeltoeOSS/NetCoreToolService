@@ -2,290 +2,448 @@
 // The .NET Foundation licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.AspNetCore.Http;
+using System.Buffers;
+using System.Diagnostics;
+using System.Net;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Steeltoe.Common.Utils.Diagnostics;
-using Steeltoe.Common.Utils.IO;
 using Steeltoe.NetCoreToolService.Models;
 using Steeltoe.NetCoreToolService.Packagers;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
+using Steeltoe.NetCoreToolService.SteeltoeUtils.IO;
 
-namespace Steeltoe.NetCoreToolService.Controllers
+namespace Steeltoe.NetCoreToolService.Controllers;
+
+/// <summary>
+/// The controller for "dotnet new".
+/// </summary>
+[ApiController]
+[Route("api/new")]
+public sealed partial class NewController : ControllerBase
 {
+    private const string DefaultOutputName = "Sample";
+    private const string DefaultPackagingFormat = "zip";
+    private const string SensitiveEndpointUnavailableMessage = "Set 'EnableSensitiveEndpoints' to 'true' in configuration to enable this endpoint.";
+    private const string MultiLineTrimChars = " \r\n";
+
     /// <summary>
-    /// The controller for "dotnet new".
+    /// The name of the 'dotnet' executable.
     /// </summary>
-    [ApiController]
-    [Route("api/new")]
-    public class NewController : ControllerBase
+    public const string ExecutableName = "dotnet";
+
+    private static readonly AsyncLock WriteLock = new();
+    private static readonly SearchValues<char> LineBreakValues = SearchValues.Create('\r', '\n');
+
+    private readonly ICommandExecutor _commandExecutor;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<NewController> _logger;
+
+    private readonly Dictionary<string, IPackager> _packagers = new()
     {
-        private const string DefaultOutput = "Sample";
+        ["zip"] = new ZipPackager()
+    };
 
-        private const string DefaultPackaging = "zip";
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NewController" /> class.
+    /// </summary>
+    /// <param name="commandExecutor">
+    /// Executes 'dotnet' commands.
+    /// </param>
+    /// <param name="configuration">
+    /// The app configuration.
+    /// </param>
+    /// <param name="logger">
+    /// The logger.
+    /// </param>
+    public NewController(ICommandExecutor commandExecutor, IConfiguration configuration, ILogger<NewController> logger)
+    {
+        ArgumentNullException.ThrowIfNull(commandExecutor);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(logger);
 
-        private readonly ICommandExecutor _commandExecutor;
+        _commandExecutor = commandExecutor;
+        _configuration = configuration;
+        _logger = logger;
+    }
 
-        private readonly ILogger<NewController> _logger;
+    /// <summary>
+    /// Gets the available project templates.
+    /// </summary>
+    /// <returns>
+    /// The project templates.
+    /// </returns>
+    [HttpGet]
+    public async Task<ActionResult> GetTemplates()
+    {
+        TemplateDictionary dictionary = await GetTemplateDictionaryAsync();
+        return Ok(dictionary);
+    }
 
-        private readonly Dictionary<string, IPackager> _packagers = new()
+    /// <summary>
+    /// Installs the templates provided by the specified NuGet package.
+    /// </summary>
+    /// <param name="nuGetId">
+    /// The NuGet package that contains project templates.
+    /// </param>
+    /// <returns>
+    /// Information about the templates that were installed.
+    /// </returns>
+    [HttpPut("nuget/{nuGetId}")]
+    public async Task<ActionResult> InstallTemplates(string nuGetId)
+    {
+        ArgumentNullException.ThrowIfNull(nuGetId);
+
+        if (!AreSensitiveEndpointsEnabled())
         {
-            { "zip", new ZipPackager() },
-        };
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NewController"/> class.
-        /// </summary>
-        /// <param name="commandExecutor">Injected command.</param>
-        /// <param name="logger">Injected logger.</param>
-        public NewController(ICommandExecutor commandExecutor, ILogger<NewController> logger = null)
-        {
-            _commandExecutor = commandExecutor;
-            _logger = logger;
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, SensitiveEndpointUnavailableMessage);
         }
 
-        /// <summary>
-        /// Gets the available Net Core Tool templates.
-        /// </summary>
-        /// <returns>Templates.</returns>
-        [HttpGet]
-        public async Task<ActionResult> GetTemplates()
+        using IDisposable lockScope = await WriteLock.AcquireAsync();
+        await _commandExecutor.ExecuteAsync($"{ExecutableName} new uninstall {nuGetId}", null, -1);
+        TemplateDictionary oldTemplates = await GetTemplateDictionaryAsync();
+
+        CommandResult installCommand = await _commandExecutor.ExecuteAsync($"{ExecutableName} new install {nuGetId}", null, -1);
+
+        if (installCommand.ExitCode == 103)
         {
-            return Ok(await GetTemplateDictionary());
+            return BadRequest($"The package '{nuGetId}' does not exist.");
         }
 
-        /// <summary>
-        /// Installs the Net Core Tool templates for the specified NuGet ID.
-        /// </summary>
-        /// <param name="nuGetId">Template NuGet ID.</param>
-        /// <returns>Information about the installed templates.</returns>
-        [HttpPut("nuget/{nuGetId}")]
-        public async Task<ActionResult> InstallTemplates(string nuGetId)
+        if (installCommand.ExitCode != 0)
         {
-            await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}");
-            var oldTemplates = await GetTemplateDictionary();
-            var installCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new install {nuGetId}");
-            const string notFoundError = "error NU1101: ";
-            if (installCommand.Output.Contains(notFoundError))
-            {
-                var start = installCommand.Output.IndexOf(notFoundError, StringComparison.Ordinal) +
-                            notFoundError.Length;
-                var end = installCommand.Output.IndexOf('\n', start);
-                return BadRequest(installCommand.Output[start..end].Trim());
-            }
-
-            var newTemplates = await GetTemplateDictionary();
-            foreach (var oldTemplate in oldTemplates.Keys)
-            {
-                newTemplates.Remove(oldTemplate);
-            }
-
-            return CreatedAtAction(nameof(InstallTemplates), newTemplates);
+            ReadOnlySpan<char> errorSpan = installCommand.Error.AsSpan();
+            return StatusCode(StatusCodes.Status500InternalServerError, errorSpan.Trim(MultiLineTrimChars).ToString());
         }
 
-        /// <summary>
-        /// Uninstalls the Net Core Tool templates for the specified NuGet ID.
-        /// </summary>
-        /// <param name="nuGetId">Template NuGet ID.</param>
-        /// <returns>Information about the installed templates.</returns>
-        [HttpDelete("nuget/{nuGetId}")]
-        public async Task<ActionResult> UninstallTemplates(string nuGetId)
+        TemplateDictionary newTemplates = await GetTemplateDictionaryAsync();
+
+        foreach (string oldTemplate in oldTemplates.Keys)
         {
-            var oldTemplates = await GetTemplateDictionary();
-            var uninstallCommand =
-                await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new uninstall {nuGetId}");
-            if (uninstallCommand.Output.Contains($"Could not find something to uninstall"))
-            {
-                return NotFound($"No templates with NuGet ID '{nuGetId}' installed.");
-            }
-
-            var newTemplates = await GetTemplateDictionary();
-            foreach (var newTemplate in newTemplates.Keys)
-            {
-                oldTemplates.Remove(newTemplate);
-            }
-
-            return Ok(oldTemplates);
+            newTemplates.Remove(oldTemplate);
         }
 
-        /// <summary>
-        /// Returns "help" for the specified Net Core Tool template.
-        /// </summary>
-        /// <param name="template">Template name.</param>
-        /// <returns>Template help.</returns>
-        [HttpGet("{template}/help")]
-        public async Task<ActionResult> GetTemplateHelp(string template)
-        {
-            var helpCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new {template} --help");
-            if (helpCommand.ExitCode != 0)
-            {
-                var start = helpCommand.Error.IndexOf("No templates found", StringComparison.Ordinal);
-                var end = helpCommand.Error.IndexOf('\n', start);
-                return NotFound(helpCommand.Error[start..end].Trim());
-            }
+        return CreatedAtAction(nameof(InstallTemplates), newTemplates);
+    }
 
-            return Ok(helpCommand.Output.Trim());
+    private bool AreSensitiveEndpointsEnabled()
+    {
+        return _configuration.GetValue("EnableSensitiveEndpoints", false);
+    }
+
+    /// <summary>
+    /// Uninstalls the templates provided by the specified NuGet package.
+    /// </summary>
+    /// <param name="nuGetId">
+    /// The NuGet package that contains project templates.
+    /// </param>
+    /// <returns>
+    /// Information about the templates that were uninstalled.
+    /// </returns>
+    [HttpDelete("nuget/{nuGetId}")]
+    public async Task<ActionResult> UninstallTemplates(string nuGetId)
+    {
+        ArgumentNullException.ThrowIfNull(nuGetId);
+
+        if (!AreSensitiveEndpointsEnabled())
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, SensitiveEndpointUnavailableMessage);
         }
 
-        /// <summary>
-        /// Gets a generated project for the specified Net Core Tool template.
-        /// </summary>
-        /// <param name="template">Template name.</param>
-        /// <param name="options">Template options.</param>
-        /// <param name="packaging">Project packaging, e.g. zip.</param>
-        /// <returns>Project archive.</returns>
-        [HttpGet]
-        [Route("{template}")]
-        public async Task<ActionResult> GetTemplateProject(
-            string template,
-            string options = null,
-            string packaging = DefaultPackaging)
+        using IDisposable lockScope = await WriteLock.AcquireAsync();
+        TemplateDictionary oldTemplates = await GetTemplateDictionaryAsync();
+        CommandResult uninstallCommand = await _commandExecutor.ExecuteAsync($"{ExecutableName} new uninstall {nuGetId}", null, -1);
+
+        if (uninstallCommand.ExitCode == 103)
         {
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
+            return NotFound($"No templates from package '{nuGetId}' are installed.");
+        }
 
-            _logger?.LogInformation("New: template={Template}, options={Options}, packaging={Packaging}", template, options, packaging);
+        if (uninstallCommand.ExitCode != 0)
+        {
+            ReadOnlySpan<char> errorSpan = uninstallCommand.Error.AsSpan();
+            return StatusCode(StatusCodes.Status500InternalServerError, errorSpan.Trim(MultiLineTrimChars).ToString());
+        }
 
-            try
+        TemplateDictionary newTemplates = await GetTemplateDictionaryAsync();
+
+        foreach (string newTemplateName in newTemplates.Keys)
+        {
+            oldTemplates.Remove(newTemplateName);
+        }
+
+        return Ok(oldTemplates);
+    }
+
+    /// <summary>
+    /// Returns "help" for the specified project template.
+    /// </summary>
+    /// <param name="template">
+    /// Template name.
+    /// </param>
+    /// <returns>
+    /// Template help.
+    /// </returns>
+    [HttpGet("{template}/help")]
+    public async Task<ActionResult> GetTemplateHelp(string template)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+
+        CommandResult helpCommand = await _commandExecutor.ExecuteAsync($"{ExecutableName} new {template} --help", null, -1);
+        ReadOnlySpan<char> outputSpan = helpCommand.Output.AsSpan();
+
+        if (helpCommand.ExitCode != 0)
+        {
+            ReadOnlySpan<char> errorSpan = helpCommand.Error.AsSpan();
+            return StatusCode(StatusCodes.Status500InternalServerError, errorSpan.Trim(MultiLineTrimChars).ToString());
+        }
+
+        if (outputSpan.StartsWith("No templates or subcommands found matching:"))
+        {
+            return NotFound($"Template '{template}' not found.");
+        }
+
+        return Ok(outputSpan.Trim().ToString());
+    }
+
+    /// <summary>
+    /// Generates a project from the specified project template.
+    /// </summary>
+    /// <param name="template">
+    /// Short name of the template.
+    /// </param>
+    /// <param name="options">
+    /// Comma-separated list of options.
+    /// </param>
+    /// <param name="packaging">
+    /// Project packaging, e.g. zip.
+    /// </param>
+    /// <returns>
+    /// The generated project archive.
+    /// </returns>
+    [HttpGet]
+    [Route("{template}")]
+#pragma warning disable S2360 // Optional parameters should not be used
+    public async Task<ActionResult> GetTemplateProject(string template, string? options = null, string packaging = DefaultPackagingFormat)
+#pragma warning restore S2360 // Optional parameters should not be used
+    {
+        ArgumentNullException.ThrowIfNull(template);
+
+        if (!_packagers.TryGetValue(packaging, out IPackager? packager))
+        {
+            return BadRequest($"Unknown or unsupported packaging format '{packaging}'.");
+        }
+
+        LogNewTemplate(template, options, packaging);
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            List<string> optionList = ParseOptions(options, out string outputName);
+            using var projectDirectory = new TempDirectory("NetCoreToolService-");
+            var commandLineBuilder = new StringBuilder($"{ExecutableName} new {template}");
+
+            foreach (string option in optionList)
             {
-                var output = DefaultOutput;
-                var optionList = new List<string>();
-                if (options is not null)
+                commandLineBuilder.Append(' ');
+                commandLineBuilder.Append(option);
+            }
+
+            return await ExecuteCreateProjectCommandAsync(template, commandLineBuilder.ToString(), projectDirectory, packager, outputName);
+        }
+        finally
+        {
+            stopwatch.Stop();
+            LogProjectGenerated(stopwatch.Elapsed);
+        }
+    }
+
+    private static List<string> ParseOptions(string? options, out string outputName)
+    {
+        outputName = DefaultOutputName;
+        var optionList = new List<string>();
+
+        if (options is not null)
+        {
+            ReadOnlySpan<char> optionsSpan = options.AsSpan();
+
+            foreach (Range optionRange in optionsSpan.Split(','))
+            {
+                ReadOnlySpan<char> optionSpan = optionsSpan[optionRange].Trim();
+
+                if (optionSpan.Length > 0)
                 {
-                    foreach (var option in options.Split(','))
-                    {
-                        if (option.Contains('='))
-                        {
-                            var nvp = option.Split('=', 2);
-                            if (nvp[0].Equals("output"))
-                            {
-                                output = nvp[1];
-                                continue;
-                            }
+                    int equalsIndex = optionSpan.IndexOf('=');
 
-                            if (nvp[1].Contains(' '))
+                    if (equalsIndex != -1)
+                    {
+                        ReadOnlySpan<char> keySpan = optionSpan[..equalsIndex].Trim();
+                        ReadOnlySpan<char> valueSpan = optionSpan[(equalsIndex + 1)..].Trim();
+
+                        if (keySpan.Length > 0 && valueSpan.Length > 0)
+                        {
+                            if (keySpan.Equals("output", StringComparison.Ordinal))
                             {
-                                optionList.Add($"--{nvp[0]}=\"{nvp[1]}\"");
-                                continue;
+                                int lastPathSeparatorIndex = valueSpan.LastIndexOfAny(":\\/");
+
+                                if (lastPathSeparatorIndex != -1)
+                                {
+                                    valueSpan = valueSpan[(lastPathSeparatorIndex + 1)..];
+                                }
+
+                                outputName = valueSpan.ToString();
+                            }
+                            else
+                            {
+                                ReadOnlySpan<char> escapedValueSpan = valueSpan.Contains(' ') ? $"\"{valueSpan}\"" : valueSpan;
+                                optionList.Add($"--{keySpan}={escapedValueSpan}");
                             }
                         }
+                    }
+                    else
+                    {
+                        optionList.Add($"--{optionSpan}");
+                    }
+                }
+            }
+        }
 
-                        optionList.Add($"--{option}");
+        optionList.Insert(0, $"--output=\"{outputName}\"");
+        return optionList;
+    }
+
+    private async Task<ActionResult> ExecuteCreateProjectCommandAsync(string template, string commandLine, TempDirectory projectDirectory, IPackager packager,
+        string outputName)
+    {
+        CommandResult newCommand = await _commandExecutor.ExecuteAsync(commandLine, projectDirectory.FullPath, -1);
+
+        // Exit codes are documented at: https://aka.ms/templating-exit-codes
+        ReadOnlySpan<char> outputSpan = newCommand.Output.AsSpan();
+        ReadOnlySpan<char> errorSpan = newCommand.Error.AsSpan();
+
+        if (newCommand.ExitCode == 103)
+        {
+            if (errorSpan.StartsWith("No templates or subcommands found matching:"))
+            {
+                return NotFound($"Template '{template}' not found.");
+            }
+
+            List<string> optionLines = [];
+
+            if (errorSpan.StartsWith("No templates found matching:"))
+            {
+                foreach (Range lineRange in errorSpan.SplitAny(LineBreakValues))
+                {
+                    ReadOnlySpan<char> lineSpan = errorSpan[lineRange];
+
+                    if (lineSpan.StartsWith("Allowed values for "))
+                    {
+                        optionLines.Add(lineSpan.ToString());
                     }
                 }
 
-                if (!_packagers.TryGetValue(packaging, out var packager))
+                if (optionLines.Count > 0)
                 {
-                    return BadRequest($"Unknown or unsupported packaging '{packaging}'.");
+                    return NotFound(string.Join(' ', optionLines));
                 }
-
-                using var projectDir = new TempDirectory("NetCoreToolService-");
-                var commandLine = new StringBuilder();
-                commandLine.Append(NetCoreTool.Command).Append(" new ").Append(template);
-                commandLine.Append(" --output=").Append(output);
-                foreach (var option in optionList)
-                {
-                    commandLine.Append(' ').Append(option);
-                }
-
-                var newCommand =
-                    await _commandExecutor.ExecuteAsync(commandLine.ToString(), projectDir.FullPath);
-
-                const string unknownTemplateError = "No templates found";
-                if (newCommand.Error.Contains(unknownTemplateError))
-                {
-                    return NotFound($"Template '{template}' not found.");
-                }
-
-                const string invalidOptionError = "Invalid option(s)";
-                if (newCommand.Error.Contains(invalidOptionError))
-                {
-                    var start = newCommand.Error.IndexOf(invalidOptionError, StringComparison.Ordinal) +
-                                invalidOptionError.Length;
-                    start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
-                    return NotFound($"Switch '{newCommand.Error[start..end]}' not found.");
-                }
-
-                const string invalidSwitchError = "Invalid input switch:";
-                if (newCommand.Error.Contains(invalidSwitchError))
-                {
-                    var start = newCommand.Error.IndexOf(invalidSwitchError, StringComparison.Ordinal) +
-                                invalidSwitchError.Length;
-                    start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
-                    return NotFound($"Switch '{newCommand.Error[start..end]}' not found.");
-                }
-
-                const string invalidParameterError = "Error: Invalid parameter(s):";
-                if (newCommand.Error.Contains(invalidParameterError))
-                {
-                    var start = newCommand.Error.IndexOf(invalidParameterError, StringComparison.Ordinal) +
-                                invalidParameterError.Length;
-                    start = newCommand.Error.IndexOf("--", start, StringComparison.Ordinal) + "--".Length;
-                    var end = newCommand.Error.IndexOf(Environment.NewLine, start, StringComparison.Ordinal);
-                    var nvp = newCommand.Error[start..end].Split(' ', 2);
-                    return NotFound($"Option '{nvp[0]}' parameter '{nvp[1]}' not found.");
-                }
-
-                if (newCommand.ExitCode != 0)
-                {
-                    return StatusCode(StatusCodes.Status500InternalServerError, newCommand.Error.Trim());
-                }
-
-                if (!newCommand.Output.Contains(" was created successfully."))
-                {
-                    return StatusCode(StatusCodes.Status500InternalServerError, newCommand.Output.Trim());
-                }
-
-                var package = packager.ToBytes(projectDir.FullPath);
-                return File(package, packager.MimeType, $"{output}{packager.FileExtension}");
-            }
-            finally
-            {
-                stopwatch.Stop();
-                _logger?.LogDebug("Generated project in {Elapsed:m\\:s\\.fff}", stopwatch.Elapsed);
             }
         }
 
-        private async Task<TemplateDictionary> GetTemplateDictionary()
+        if (newCommand.ExitCode == 127 && errorSpan.StartsWith("Error: Invalid option(s):"))
         {
-            var listCommand = await _commandExecutor.ExecuteAsync($"{NetCoreTool.Command} new list");
+            List<string> optionLines = [];
 
-            var lines = listCommand.Output.Split('\n').ToList()
-                .FindAll(line => !string.IsNullOrWhiteSpace(line));
-
-            var headingIdx = lines.FindIndex(line => line.StartsWith('-'));
-            var headings = lines[headingIdx].Split("  ");
-            const int nameColStart = 0;
-            var nameColEnd = nameColStart + headings[0].Length;
-            var shortNameColStart = nameColEnd + 2;
-            var shortNameColEnd = shortNameColStart + headings[1].Length;
-            var languageColStart = shortNameColEnd + 2;
-            var languageColEnd = languageColStart + headings[2].Length;
-            var tagsColStart = languageColEnd + 2;
-            var tagsColEnd = tagsColStart + headings[3].Length;
-            lines = lines.GetRange(headingIdx + 1, lines.Count - headingIdx - 1);
-
-            var dict = new TemplateDictionary();
-            foreach (var line in lines)
+            foreach (Range lineRange in errorSpan.SplitAny(LineBreakValues))
             {
-                var template = line[shortNameColStart..shortNameColEnd].Trim();
-                var templateInfo = new TemplateInfo
+                ReadOnlySpan<char> lineSpan = errorSpan[lineRange];
+
+                if (lineSpan.EndsWith(" is not a valid option"))
                 {
-                    Name = line[nameColStart..nameColEnd].Trim(),
-                    Languages = line[languageColStart..languageColEnd].Trim(),
-                    Tags = line[tagsColStart.. Math.Min(tagsColEnd, line.Length)].Trim(),
-                };
-                dict.Add(template, templateInfo);
+                    optionLines.Add(lineSpan.TrimStart().ToString() + '.');
+                }
             }
 
-            return dict;
+            if (optionLines.Count > 0)
+            {
+                return NotFound(string.Join(' ', optionLines));
+            }
+        }
+
+        if (newCommand.ExitCode != 0)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, errorSpan.Trim(MultiLineTrimChars).ToString());
+        }
+
+        if (!outputSpan.Contains(" was created successfully.", StringComparison.Ordinal))
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, outputSpan.Trim(MultiLineTrimChars).ToString());
+        }
+
+        byte[] package = packager.ToBytes(projectDirectory.FullPath);
+        return File(package, packager.MimeType, $"{outputName}{packager.FileExtension}");
+    }
+
+    private async Task<TemplateDictionary> GetTemplateDictionaryAsync()
+    {
+        CommandResult listCommand = await _commandExecutor.ExecuteAsync($"{ExecutableName} new list", null, -1);
+
+        if (listCommand.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Failed to list templates: {listCommand.Error}");
+        }
+
+        ReadOnlySpan<char> outputSpan = listCommand.Output.AsSpan();
+        ListTable? listTable = null;
+        var dictionary = new TemplateDictionary();
+
+        foreach (Range lineRange in outputSpan.SplitAny(LineBreakValues))
+        {
+            ReadOnlySpan<char> lineSpan = outputSpan[lineRange].Trim();
+
+            if (lineSpan.Length > 0)
+            {
+                if (lineSpan.StartsWith('-'))
+                {
+                    List<Range> columnRanges = [];
+
+                    foreach (Range columnRange in lineSpan.Split("  "))
+                    {
+                        columnRanges.Add(columnRange);
+                    }
+
+                    if (columnRanges.Count < 4)
+                    {
+                        throw new InvalidOperationException("Failed to parse template table.");
+                    }
+
+                    listTable = new ListTable(columnRanges[0], columnRanges[1], columnRanges[2], columnRanges[3]);
+                }
+                else if (listTable != null)
+                {
+                    ReadOnlySpan<char> shortNameSpan = lineSpan[listTable.Value.ShortNameRange].TrimEnd();
+                    ReadOnlySpan<char> templateNameSpan = lineSpan[listTable.Value.TemplateNameRange].TrimEnd();
+                    ReadOnlySpan<char> languageSpan = lineSpan[listTable.Value.LanguageRange].TrimEnd();
+                    ReadOnlySpan<char> tagsSpan = lineSpan[listTable.Value.GetTagsRangeForLine(lineSpan.Length)];
+
+                    var templateInfo = new TemplateInfo(templateNameSpan.ToString(), languageSpan.ToString(), tagsSpan.ToString());
+                    dictionary.Add(shortNameSpan.ToString(), templateInfo);
+                }
+            }
+        }
+
+        return dictionary;
+    }
+
+    [LoggerMessage(LogLevel.Information, "New: template={Template}, options={Options}, packaging={Packaging}")]
+    partial void LogNewTemplate(string template, string? options, string packaging);
+
+    [LoggerMessage(LogLevel.Debug, "Generated project in {Elapsed:c}")]
+    partial void LogProjectGenerated(TimeSpan elapsed);
+
+    private readonly record struct ListTable(Range TemplateNameRange, Range ShortNameRange, Range LanguageRange, Range TagsRange)
+    {
+        public Range GetTagsRangeForLine(int lineLength)
+        {
+            return TagsRange.End.Value >= lineLength ? new Range(TagsRange.Start, lineLength) : TagsRange;
         }
     }
 }

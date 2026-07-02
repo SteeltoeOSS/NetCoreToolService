@@ -1,0 +1,26 @@
+<Solution>
+  <Folder Name="/.github/" />
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/build-and-stage.yml" />
+    <File Path=".github/workflows/pr-cleanup.yml" />
+    <File Path=".github/workflows/stage-prod-swap.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="docker-compose.yaml" />
+    <File Path="Dockerfile" />
+    <File Path="install-template.sh" />
+    <File Path="stylecop.json" />
+    <File Path="Version.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/NetCoreToolService/Steeltoe.NetCoreToolService.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/NetCoreToolService.Test/Steeltoe.NetCoreToolService.Test.csproj" />
+  </Folder>
+</Solution>

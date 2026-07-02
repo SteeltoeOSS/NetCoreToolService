@@ -1,0 +1,2 @@
+# Enable running shell scripts from Docker on Windows
+*.sh eol=lf
