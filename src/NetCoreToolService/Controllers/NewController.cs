@@ -6,6 +6,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Steeltoe.NetCoreToolService.Models;
 using Steeltoe.NetCoreToolService.Packagers;
@@ -33,6 +34,17 @@ public sealed partial class NewController : ControllerBase
 
     private static readonly AsyncLock WriteLock = new();
     private static readonly SearchValues<char> LineBreakValues = SearchValues.Create('\r', '\n');
+
+    // Options that must never be passed to `dotnet new`, regardless of source.
+    private static readonly HashSet<string> BlockedOptionNames = new([
+        "allow-scripts",
+        "add-source",
+        "force",
+        "dry-run",
+        "no-update-check",
+        "interactive",
+        "project"
+    ], StringComparer.OrdinalIgnoreCase);
 
     private readonly ICommandExecutor _commandExecutor;
     private readonly IConfiguration _configuration;
@@ -98,6 +110,11 @@ public sealed partial class NewController : ControllerBase
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, SensitiveEndpointUnavailableMessage);
         }
 
+        if (!IsNuGetPackageIdValid(nuGetId))
+        {
+            return BadRequest($"Invalid NuGet package ID '{nuGetId}'.");
+        }
+
         using IDisposable lockScope = await WriteLock.AcquireAsync();
         await _commandExecutor.ExecuteAsync($"{ExecutableName} new uninstall {nuGetId}", null, -1);
         TemplateDictionary oldTemplates = await GetTemplateDictionaryAsync();
@@ -149,6 +166,11 @@ public sealed partial class NewController : ControllerBase
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, SensitiveEndpointUnavailableMessage);
         }
 
+        if (!IsNuGetPackageIdValid(nuGetId))
+        {
+            return BadRequest($"Invalid NuGet package ID '{nuGetId}'.");
+        }
+
         using IDisposable lockScope = await WriteLock.AcquireAsync();
         TemplateDictionary oldTemplates = await GetTemplateDictionaryAsync();
         CommandResult uninstallCommand = await _commandExecutor.ExecuteAsync($"{ExecutableName} new uninstall {nuGetId}", null, -1);
@@ -174,6 +196,11 @@ public sealed partial class NewController : ControllerBase
         return Ok(oldTemplates);
     }
 
+    private static bool IsNuGetPackageIdValid(string nuGetId)
+    {
+        return NuGetPackageIdRegex().IsMatch(nuGetId);
+    }
+
     /// <summary>
     /// Returns "help" for the specified project template.
     /// </summary>
@@ -187,6 +214,11 @@ public sealed partial class NewController : ControllerBase
     public async Task<ActionResult> GetTemplateHelp(string template)
     {
         ArgumentNullException.ThrowIfNull(template);
+
+        if (!IsTemplateShortNameValid(template))
+        {
+            return BadRequest($"Invalid template name '{template}'.");
+        }
 
         CommandResult helpCommand = await _commandExecutor.ExecuteAsync($"{ExecutableName} new {template} --help", null, -1);
         ReadOnlySpan<char> outputSpan = helpCommand.Output.AsSpan();
@@ -228,6 +260,11 @@ public sealed partial class NewController : ControllerBase
     {
         ArgumentNullException.ThrowIfNull(template);
 
+        if (!IsTemplateShortNameValid(template))
+        {
+            return BadRequest($"Invalid template name '{template}'.");
+        }
+
         if (!_packagers.TryGetValue(packaging, out IPackager? packager))
         {
             return BadRequest($"Unknown or unsupported packaging format '{packaging}'.");
@@ -238,7 +275,13 @@ public sealed partial class NewController : ControllerBase
 
         try
         {
-            List<string> optionList = ParseOptions(options, out string outputName);
+            List<string> optionList = ParseOptions(options, out string outputName, out string? invalidOptionName);
+
+            if (invalidOptionName is not null)
+            {
+                return BadRequest($"Invalid or blocked option name '{invalidOptionName}'.");
+            }
+
             using var projectDirectory = new TempDirectory("NetCoreToolService-");
             var commandLineBuilder = new StringBuilder($"{ExecutableName} new {template}");
 
@@ -257,9 +300,15 @@ public sealed partial class NewController : ControllerBase
         }
     }
 
-    private static List<string> ParseOptions(string? options, out string outputName)
+    private static bool IsTemplateShortNameValid(string template)
+    {
+        return TemplateShortNameRegex().IsMatch(template);
+    }
+
+    private static List<string> ParseOptions(string? options, out string outputName, out string? invalidOptionName)
     {
         outputName = DefaultOutputName;
+        invalidOptionName = null;
         var optionList = new List<string>();
 
         if (options is not null)
@@ -294,6 +343,12 @@ public sealed partial class NewController : ControllerBase
                             }
                             else
                             {
+                                if (!IsValidOptionName(keySpan))
+                                {
+                                    invalidOptionName = keySpan.ToString();
+                                    return [];
+                                }
+
                                 ReadOnlySpan<char> escapedValueSpan = valueSpan.Contains(' ') ? $"\"{valueSpan}\"" : valueSpan;
                                 optionList.Add($"--{keySpan}={escapedValueSpan}");
                             }
@@ -301,6 +356,12 @@ public sealed partial class NewController : ControllerBase
                     }
                     else
                     {
+                        if (!IsValidOptionName(optionSpan))
+                        {
+                            invalidOptionName = optionSpan.ToString();
+                            return [];
+                        }
+
                         optionList.Add($"--{optionSpan}");
                     }
                 }
@@ -309,6 +370,24 @@ public sealed partial class NewController : ControllerBase
 
         optionList.Insert(0, $"--output=\"{outputName}\"");
         return optionList;
+    }
+
+    private static bool IsValidOptionName(ReadOnlySpan<char> name)
+    {
+        if (name.IsEmpty || !char.IsAsciiLetter(name[0]))
+        {
+            return false;
+        }
+
+        foreach (char ch in name)
+        {
+            if (!char.IsAsciiLetterOrDigit(ch) && ch != '-')
+            {
+                return false;
+            }
+        }
+
+        return !BlockedOptionNames.Contains(name.ToString());
     }
 
     private async Task<ActionResult> ExecuteCreateProjectCommandAsync(string template, string commandLine, TempDirectory projectDirectory, IPackager packager,
@@ -438,6 +517,13 @@ public sealed partial class NewController : ControllerBase
 
     [LoggerMessage(LogLevel.Debug, "Generated project in {Elapsed:c}")]
     partial void LogProjectGenerated(TimeSpan elapsed);
+
+    [GeneratedRegex(@"^\.?[a-zA-Z0-9][a-zA-Z0-9\-_\.]*$", RegexOptions.Compiled)]
+    private static partial Regex TemplateShortNameRegex();
+
+    // NuGet package IDs: see https://learn.microsoft.com/en-us/nuget/nuget-org/publish-a-package#package-name-limits
+    [GeneratedRegex(@"^[A-Za-z0-9_][A-Za-z0-9\.\-]*$", RegexOptions.Compiled)]
+    private static partial Regex NuGetPackageIdRegex();
 
     private readonly record struct ListTable(Range TemplateNameRange, Range ShortNameRange, Range LanguageRange, Range TagsRange)
     {
