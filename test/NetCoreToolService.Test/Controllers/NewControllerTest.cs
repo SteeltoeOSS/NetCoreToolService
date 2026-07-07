@@ -509,4 +509,98 @@ public sealed class NewControllerTest
         errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
         errorResult.Value.Should().Be("Unexpected output.");
     }
+
+    [Theory]
+    [InlineData("install evil-pkg")]
+    [InlineData("--allow-scripts")]
+    [InlineData("new install")]
+    [InlineData("../evil")]
+    [InlineData("evil;id")]
+    public async Task GetTemplateProject_InjectedTemplateName_Should_Return_BadRequest(string template)
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.GetTemplateProject(template);
+
+        // Assert
+        BadRequestObjectResult badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequest.Value.Should().Be($"Invalid template name '{template}'.");
+    }
+
+    [Theory]
+    [InlineData("install evil-pkg")]
+    [InlineData("--allow-scripts")]
+    [InlineData("../evil")]
+    public async Task GetTemplateHelp_InjectedTemplateName_Should_Return_BadRequest(string template)
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.GetTemplateHelp(template);
+
+        // Assert
+        BadRequestObjectResult badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequest.Value.Should().Be($"Invalid template name '{template}'.");
+    }
+
+    [Theory]
+    [InlineData("allow-scripts=yes")]
+    [InlineData("allow-scripts")]
+    [InlineData("--allow-scripts=yes")]
+    [InlineData("force=true")]
+    [InlineData("name=foo,allow-scripts=yes")]
+    public async Task GetTemplateProject_BlockedOrInvalidOption_Should_Return_BadRequest(string options)
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.GetTemplateProject("classlib", options);
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Theory]
+    [InlineData("evil pkg")]
+    [InlineData("evil;pkg")]
+    [InlineData("../Evil.Templates")]
+    [InlineData("evil|pkg")]
+    public async Task InstallTemplates_InvalidNuGetId_Should_Return_BadRequest(string nuGetId)
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.InstallTemplates(nuGetId);
+
+        // Assert
+        BadRequestObjectResult badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequest.Value.Should().Be($"Invalid NuGet package ID '{nuGetId}'.");
+    }
+
+    [Theory]
+    [InlineData("evil pkg")]
+    [InlineData("evil;pkg")]
+    [InlineData("../Evil.Templates")]
+    public async Task UninstallTemplates_InvalidNuGetId_Should_Return_BadRequest(string nuGetId)
+    {
+        // Arrange
+        var executor = new CommandExecutor(NullLogger<CommandExecutor>.Instance);
+        var controller = new NewController(executor, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
+
+        // Act
+        ActionResult result = await controller.UninstallTemplates(nuGetId);
+
+        // Assert
+        BadRequestObjectResult badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequest.Value.Should().Be($"Invalid NuGet package ID '{nuGetId}'.");
+    }
 }
