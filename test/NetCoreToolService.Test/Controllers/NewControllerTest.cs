@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Steeltoe.NetCoreToolService.Controllers;
 using Steeltoe.NetCoreToolService.Models;
 using Steeltoe.NetCoreToolService.SteeltoeUtils.Diagnostics;
@@ -31,9 +31,9 @@ public sealed class NewControllerTest
     public async Task GetTemplates_Should_Return_All_Templates()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
+        var executor = Substitute.For<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1)).ReturnsAsync(new CommandResult
+        executor.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1).Returns(new CommandResult
         {
             Output = """
                 These templates matched your input:
@@ -45,7 +45,7 @@ public sealed class NewControllerTest
                 """
         });
 
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplates();
@@ -81,9 +81,9 @@ public sealed class NewControllerTest
     public async Task InstallTemplates_Should_Return_Installed_Templates()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
+        var executor = Substitute.For<ICommandExecutor>();
 
-        executor.SetupSequence(c => c.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1)).ReturnsAsync(new CommandResult
+        executor.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1).Returns(new CommandResult
         {
             Output = """
                 These templates matched your input:
@@ -93,7 +93,7 @@ public sealed class NewControllerTest
                 My Template        myt         lang        tags
                 My Other Template  my-ot       other-lang  other-tags
                 """
-        }).ReturnsAsync(new CommandResult
+        }, new CommandResult
         {
             Output = """
                 These templates matched your input:
@@ -107,9 +107,9 @@ public sealed class NewControllerTest
                 """
         });
 
-        executor.Setup(c => c.ExecuteAsync($"{NewController.ExecutableName} new install My.Templates", null, -1)).ReturnsAsync(default(CommandResult));
+        executor.ExecuteAsync($"{NewController.ExecutableName} new install My.Templates", null, -1).Returns(default(CommandResult));
 
-        var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.InstallTemplates("My.Templates");
@@ -160,9 +160,9 @@ public sealed class NewControllerTest
     public async Task UninstallTemplates_Should_Return_Uninstalled_Templates()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
+        var executor = Substitute.For<ICommandExecutor>();
 
-        executor.SetupSequence(c => c.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1)).ReturnsAsync(new CommandResult
+        executor.ExecuteAsync($"{NewController.ExecutableName} new list", null, -1).Returns(new CommandResult
         {
             Output = """
                 These templates matched your input:
@@ -174,7 +174,7 @@ public sealed class NewControllerTest
                 My Other Template   my-ot       other-lang  other-tags
                 Other New Template  ont         big-talk    other-stuff
                 """
-        }).ReturnsAsync(new CommandResult
+        }, new CommandResult
         {
             Output = """
                 These templates matched your input:
@@ -186,9 +186,9 @@ public sealed class NewControllerTest
                 """
         });
 
-        executor.Setup(c => c.ExecuteAsync($"{NewController.ExecutableName} new uninstall My.Templates", null, -1)).ReturnsAsync(default(CommandResult));
+        executor.ExecuteAsync($"{NewController.ExecutableName} new uninstall My.Templates", null, -1).Returns(default(CommandResult));
 
-        var controller = new NewController(executor.Object, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor, SensitiveEndpointsEnabledConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.UninstallTemplates("My.Templates");
@@ -261,14 +261,14 @@ public sealed class NewControllerTest
                dotnet new classlib -h --language F#
             """;
 
-        var executor = new Mock<ICommandExecutor>();
+        var executor = Substitute.For<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync($"{NewController.ExecutableName} new classlib --help", null, -1)).ReturnsAsync(new CommandResult
+        executor.ExecuteAsync($"{NewController.ExecutableName} new classlib --help", null, -1).Returns(new CommandResult
         {
             Output = helpText
         });
 
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateHelp("classlib");
@@ -468,15 +468,15 @@ public sealed class NewControllerTest
     public async Task GetTemplateProject_UnknownError_Should_Return_InternalServerError()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
+        var executor = Substitute.For<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
+        executor.ExecuteAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Is(-1)).Returns(new CommandResult
         {
             ExitCode = 1,
             Error = "Something bad happened."
         });
 
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template");
@@ -491,15 +491,15 @@ public sealed class NewControllerTest
     public async Task GetTemplateProject_UnknownOutput_Should_Return_InternalServerError()
     {
         // Arrange
-        var executor = new Mock<ICommandExecutor>();
+        var executor = Substitute.For<ICommandExecutor>();
 
-        executor.Setup(c => c.ExecuteAsync(It.IsAny<string>(), It.IsAny<string>(), -1)).ReturnsAsync(new CommandResult
+        executor.ExecuteAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Is(-1)).Returns(new CommandResult
         {
             Output = "Unexpected output.",
             Error = string.Empty
         });
 
-        var controller = new NewController(executor.Object, EmptyConfiguration, NullLogger<NewController>.Instance);
+        var controller = new NewController(executor, EmptyConfiguration, NullLogger<NewController>.Instance);
 
         // Act
         ActionResult result = await controller.GetTemplateProject("my-template");

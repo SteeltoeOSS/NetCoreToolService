@@ -10,7 +10,7 @@
     <FluentAssertionsVersion>7.2.*</FluentAssertionsVersion>
     <MicrosoftAspNetCoreMvcTestingVersion>10.0.*</MicrosoftAspNetCoreMvcTestingVersion>
     <MicrosoftNetTestSdkVersion>18.11.*</MicrosoftNetTestSdkVersion>
-    <MoqVersion>4.20.69</MoqVersion>
+    <NSubstituteVersion>6.2.*</NSubstituteVersion>
     <ScalarVersion>2.19.*</ScalarVersion>
     <SonarAnalyzerVersion>10.33.0.1635</SonarAnalyzerVersion>
     <SteeltoeVersion>4.3.*</SteeltoeVersion>
